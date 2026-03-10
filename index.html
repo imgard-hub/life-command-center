@@ -39,15 +39,27 @@ body{font-family:'Montserrat',sans-serif;color:var(--gold-soft);display:flex;fle
 #header .rev-label{font-size:8px;color:var(--gold-dk);letter-spacing:1px;}
 #header .rev-val{font-size:15px;font-weight:700;color:var(--gold);}
 
-/* ── TABS ── */
+/* ── TAB GROUPS ── */
+#tab-groups{
+  background:var(--navy);
+  border-bottom:1px solid rgba(201,168,76,.2);
+  display:flex;padding:0 12px;gap:4px;flex-shrink:0;
+}
+.tab-group-btn{
+  padding:9px 16px;background:none;border:none;cursor:pointer;
+  color:var(--gold-dk);border-bottom:3px solid transparent;
+  font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:2px;white-space:nowrap;transition:all .2s;flex:1;text-align:center;
+}
+.tab-group-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
 #tabbar{
-  background:var(--navy);border-bottom:1px solid rgba(201,168,76,.15);
+  background:rgba(13,27,42,.95);border-bottom:1px solid rgba(201,168,76,.1);
   overflow-x:auto;flex-shrink:0;scrollbar-width:none;
   display:flex;padding:0 8px;
 }
 #tabbar::-webkit-scrollbar{display:none;}
 .tab{
-  padding:10px 12px;background:none;border:none;cursor:pointer;
+  padding:9px 11px;background:none;border:none;cursor:pointer;
   color:var(--gold-dk);border-bottom:2px solid transparent;
   font-family:'Montserrat',sans-serif;font-size:9px;font-weight:400;
   letter-spacing:1px;white-space:nowrap;transition:all .2s;
@@ -380,22 +392,15 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
-<!-- TAB BAR -->
-<div id="tabbar">
-  <button class="tab active" data-tab="dashboard">⌂ Home</button>
-  <button class="tab" data-tab="priorities">⭐ Priorities</button>
-  <button class="tab" data-tab="schedule">🕐 Schedule</button>
-  <button class="tab" data-tab="wellness">🌿 Wellness</button>
-  <button class="tab" data-tab="meditation">🧘 Meditation</button>
-  <button class="tab" data-tab="meals">🥗 Meals</button>
-  <button class="tab" data-tab="bills">💳 Bills</button>
-  <button class="tab" data-tab="debt">📉 Debt</button>
-  <button class="tab" data-tab="savings">💰 Savings</button>
-  <button class="tab" data-tab="revenue">📈 Revenue</button>
-  <button class="tab" data-tab="marketing">📣 Marketing</button>
-  <button class="tab" data-tab="appointments">📅 Appts</button>
-  <button class="tab" data-tab="affirmations">🙏 Affirm</button>
+<!-- TAB GROUPS -->
+<div id="tab-groups">
+  <button class="tab-group-btn active" data-group="daily" onclick="switchGroup('daily')">⚡ DAILY</button>
+  <button class="tab-group-btn" data-group="build" onclick="switchGroup('build')">💼 BUILD</button>
+  <button class="tab-group-btn" data-group="grow" onclick="switchGroup('grow')">🌱 GROW</button>
 </div>
+
+<!-- TAB BAR -->
+<div id="tabbar"></div>
 
 <!-- CONTENT -->
 <div id="content"></div>
@@ -595,14 +600,103 @@ const DEFAULTS = {
     "I am enough. I am powerful. I am unstoppable.",
   ],
   vision:[
-    {icon:"💰",title:"Financial Freedom",detail:"$50,000+ monthly income. My businesses run with or without me.",metric:""},
-    {icon:"🧪",title:"Kudrant Lab",detail:"#1 Oracle DBA community — 10,000+ members thriving.",metric:""},
-    {icon:"🚀",title:"Accelerator",detail:"500+ students placed in $100K+ DBA roles.",metric:""},
-    {icon:"📖",title:"Poetry Empire",detail:"5 published books. Healing millions of hearts.",metric:""},
-    {icon:"🏠",title:"Dream Home",detail:"Beautiful, peaceful, creative space for my family.",metric:""},
-    {icon:"🌿",title:"Vibrant Health",detail:"Energized, strong, and glowing every single day.",metric:""},
-    {icon:"✈️",title:"Travel & Freedom",detail:"See the world fully on my own terms.",metric:""},
-    {icon:"👑",title:"Legacy",detail:"Generational wealth & being a fully present parent.",metric:""},
+    {icon:"💪",title:"Health & Wellness",color:"#10B981",goals:"",intentions:"",metric:""},
+    {icon:"💰",title:"Wealth & Finances",color:"#C9A84C",goals:"$50K/month income. Debt free. Investments growing.",intentions:"",metric:""},
+    {icon:"👨‍👩‍👧",title:"Family & Relationships",color:"#EC4899",goals:"Present, connected, loving parent and partner.",intentions:"",metric:""},
+    {icon:"🙏",title:"Spiritual Growth",color:"#8B5CF6",goals:"Deep faith, daily practice, inner peace.",intentions:"",metric:""},
+    {icon:"🌍",title:"Contribution",color:"#14B8A6",goals:"Impact millions through teaching and poetry.",intentions:"",metric:""},
+    {icon:"💼",title:"Career & DBA",color:"#3B82F6",goals:"Top Oracle DBA expert. Six-figure career.",intentions:"",metric:""},
+    {icon:"🚀",title:"Business",color:"#F59E0B",goals:"Kudrant Lab, Accelerator, Rescue+ all thriving.",intentions:"",metric:""},
+    {icon:"🏠",title:"Home & Environment",color:"#6366F1",goals:"Beautiful, peaceful, organized dream home.",intentions:"",metric:""},
+    {icon:"🎨",title:"Creativity",color:"#F472B6",goals:"5 published poetry books. Art that heals.",intentions:"",metric:""},
+    {icon:"✈️",title:"Travel & Adventure",color:"#0EA5E9",goals:"See the world freely on my own terms.",intentions:"",metric:""},
+  ],
+  mission:{
+    purpose:"",
+    mission:"",
+    vision:"",
+    coreValues:"",
+    mantra:"",
+  },
+  weeklyReviews:[],
+  bucketList:[
+    {item:"Publish my first poetry book",category:"Creativity",done:false,year:"2026"},
+    {item:"Hit $50K in a single month",category:"Wealth",done:false,year:"2026"},
+    {item:"Travel to a country I've never been",category:"Travel",done:false,year:"2026"},
+    {item:"Build Kudrant Lab to 1,000 members",category:"Business",done:false,year:"2026"},
+    {item:"Take Sage on a special trip",category:"Family",done:false,year:"2026"},
+  ],
+  hundredThings:[
+    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
+    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
+    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
+    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
+  ],
+  goals:[
+    {title:"Hit $50K Monthly Revenue",area:"Wealth",deadline:"2026-12-31",why:"Financial freedom for my family",microtasks:[
+      {task:"Launch Kudrant Lab membership campaign",done:false},
+      {task:"Enroll 15 Accelerator students",done:false},
+      {task:"Close 20 Rescue+ clients",done:false},
+      {task:"Publish and market poetry book",done:false},
+    ]},
+    {title:"Publish Quantum Awakening",area:"Creativity",deadline:"2026-06-30",why:"Share my healing through poetry",microtasks:[
+      {task:"Finalize all poems",done:false},
+      {task:"Design book cover",done:false},
+      {task:"Submit to publisher / self-publish",done:false},
+      {task:"Launch marketing campaign",done:false},
+    ]},
+    {title:"Grow Kudrant Lab to 500 members",area:"Business",deadline:"2026-09-30",why:"Build the #1 Oracle DBA community",microtasks:[
+      {task:"Post 3x/week content",done:false},
+      {task:"Launch referral program",done:false},
+      {task:"Create onboarding sequence",done:false},
+    ]},
+  ],
+  readingList:[
+    {title:"The Big Leap",author:"Gay Hendricks",category:"Mindset",status:"Reading",rating:0,notes:""},
+    {title:"Atomic Habits",author:"James Clear",category:"Productivity",status:"Want to Read",rating:0,notes:""},
+    {title:"You Are a Badass at Making Money",author:"Jen Sincero",category:"Wealth",status:"Want to Read",rating:0,notes:""},
+    {title:"The Four Agreements",author:"Don Miguel Ruiz",category:"Spiritual",status:"Read",rating:5,notes:"Life changing"},
+  ],
+  rituals:[
+    {name:"Morning MAP Meditation",time:"6:00 AM",days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],active:true,notes:"Set intention, visualize, feel it"},
+    {name:"Evening Gratitude & Review",time:"9:00 PM",days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],active:true,notes:"3 wins, 1 lesson, tomorrow's focus"},
+    {name:"Weekly Business Review",time:"Sunday 7 PM",days:["Sun"],active:true,notes:"Revenue, content, goals check"},
+    {name:"Skincare & Self Care",time:"7:00 PM",days:["Mon","Wed","Fri","Sat","Sun"],active:true,notes:"AM + PM routine"},
+    {name:"Movement / Workout",time:"5:30 AM",days:["Mon","Tue","Wed","Thu","Fri"],active:true,notes:""},
+  ],
+  celebrations:[
+    "I built a full life command center app from scratch",
+    "I show up for Sage every single week",
+    "I built multiple income streams while working full-time",
+    "I write poetry that heals",
+    "I am brave enough to pursue my dreams",
+  ],
+  boundaries:[
+    {boundary:"I do not work on my business after 10 PM",area:"Work/Life",active:true},
+    {boundary:"I protect my morning meditation time",area:"Spiritual",active:true},
+    {boundary:"I do not accept low-paying clients who drain my energy",area:"Business",active:true},
+    {boundary:"I limit social media to scheduled content time",area:"Mental Health",active:true},
+    {boundary:"I say no to anything that doesn't align with my goals",area:"Personal",active:true},
+  ],
+  parenting:[
+    {task:"Weekly call with Sage",frequency:"Weekly",done:false,notes:""},
+    {task:"Send a care package",frequency:"Monthly",done:false,notes:""},
+    {task:"Plan a special trip together",frequency:"Quarterly",done:false,notes:""},
+    {task:"Write a letter to Sage",frequency:"Monthly",done:false,notes:"Share wisdom and love"},
+    {task:"Celebrate Sage's wins",frequency:"Ongoing",done:false,notes:""},
+  ],
+  education:[
+    {course:"Oracle Database 19c Advanced",platform:"Oracle University",status:"In Progress",progress:45,notes:""},
+    {course:"YouTube Growth Masterclass",platform:"Online",status:"Want to Start",progress:0,notes:""},
+    {course:"Poetry Writing Workshop",platform:"Skillshare",status:"Want to Start",progress:0,notes:""},
+    {course:"Business Finance Basics",platform:"Coursera",status:"Want to Start",progress:0,notes:""},
+  ],
+  resources:[
+    {name:"Kudrant Lab Community",type:"Community",url:"",notes:"My own DBA community"},
+    {name:"Oracle Documentation",type:"Reference",url:"https://docs.oracle.com",notes:""},
+    {name:"Canva",type:"Tool",url:"https://canva.com",notes:"Design & content creation"},
+    {name:"Skool",type:"Platform",url:"https://skool.com",notes:"Community platform"},
+    {name:"ConvertKit",type:"Tool",url:"https://convertkit.com",notes:"Email marketing"},
   ],
   affIdx:0,
   lastReset:"",
@@ -1366,6 +1460,373 @@ function renderAffirmations(){
 // ══════════════════════════════════════════════════════════════
 // RENDER MAP
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// NEW MODULE RENDERS
+// ══════════════════════════════════════════════════════════════
+
+function renderMission(){
+  const m = S.mission || {};
+  return `
+  ${sectionHdr("🌟","Mission, Vision & Purpose","The anchor of everything you do.")}
+  <div style="background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.04));border:2px solid rgba(201,168,76,.4);border-radius:16px;padding:22px;margin-bottom:16px;text-align:center">
+    <div style="font-size:9px;color:var(--gold-dk);letter-spacing:3px;margin-bottom:10px">✦ YOUR MANTRA ✦</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:var(--gold-soft);line-height:1.6;min-height:28px">
+      ${m.mantra||"<span style='color:var(--gold-dk);font-size:14px'>Set your mantra below...</span>"}
+    </div>
+  </div>
+  ${[
+    {k:"purpose",    icon:"🎯", t:"MY PURPOSE",     s:"Why do you exist? What were you put here to do?",          ph:"I exist to..."},
+    {k:"mission",    icon:"🚀", t:"MY MISSION",     s:"What are you actively building and doing right now?",      ph:"My mission is to..."},
+    {k:"vision",     icon:"👁", t:"MY VISION",      s:"What does your ideal life look like in 5 years?",         ph:"I see myself..."},
+    {k:"coreValues", icon:"💎", t:"MY CORE VALUES", s:"What principles guide every decision you make?",          ph:"Integrity, abundance, love, faith..."},
+    {k:"mantra",     icon:"✨", t:"MY MANTRA",      s:"One powerful sentence that defines who you are.",         ph:"I am..."},
+  ].map(f=>`
+    <div class="card" style="margin-bottom:10px;border-left:4px solid var(--gold)">
+      <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:2px">${f.icon} ${f.t}</div>
+      <div style="font-size:10px;color:var(--gold-dk);margin-bottom:8px;font-style:italic">${f.s}</div>
+      <textarea style="min-height:72px;font-family:'Cormorant Garamond',serif;font-size:15px;font-style:italic;line-height:1.7"
+        placeholder="${f.ph}" data-action="mission-field" data-field="${f.k}">${m[f.k]||""}</textarea>
+    </div>`).join("")}`;
+}
+
+function renderVisionBoard(){
+  return `
+  ${sectionHdr("🎯","Vision Board","10 life categories. Tap each to set your goals and intentions.")}
+  ${S.vision.map((v,i)=>`
+    <div class="card" style="border-left:4px solid ${v.color};margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:28px">${v.icon}</span>
+        <div style="font-size:16px;font-weight:700;color:${v.color};font-family:'Cormorant Garamond',serif;flex:1">${v.title}</div>
+      </div>
+      <div class="label" style="margin-bottom:4px">GOALS & DREAMS</div>
+      <textarea style="min-height:65px;font-size:12px;margin-bottom:8px" placeholder="What do you want in this area of life?"
+        data-action="vision-goals" data-idx="${i}">${v.goals||""}</textarea>
+      <div class="label" style="margin-bottom:4px">INTENTION / AFFIRMATION</div>
+      <input style="font-size:12px;margin-bottom:8px" placeholder="I am / I have / I attract..."
+        value="${v.intentions||""}" data-action="vision-intentions" data-idx="${i}"/>
+      <div class="label" style="margin-bottom:4px">KEY METRIC</div>
+      <input style="font-size:12px" placeholder="How will you know you've arrived?"
+        value="${v.metric||""}" data-action="vision-metric" data-idx="${i}"/>
+    </div>`).join("")}`;
+}
+
+function renderWeeklyReview(){
+  const reviews = S.weeklyReviews || [];
+  const thisWeek = getWeekLabel();
+  const existing = reviews.find(r=>r.week===thisWeek)||{week:thisWeek,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:0};
+  const fieldDefs = [
+    {k:"worked",     e:"✅", t:"What WORKED this week?",        c:C.green,  ph:"Wins, breakthroughs, things that went well..."},
+    {k:"didnt",      e:"❌", t:"What DIDN'T work?",             c:C.red,    ph:"Challenges, missed goals, things to improve..."},
+    {k:"change",     e:"🔄", t:"What will I CHANGE next week?", c:C.orange, ph:"Specific adjustments and commitments..."},
+    {k:"wins",       e:"🏆", t:"My biggest WIN this week",      c:C.gold,   ph:"Celebrate something — big or small..."},
+    {k:"intentions", e:"🎯", t:"My intentions for NEXT week",   c:C.blue,   ph:"What am I focused on and committed to..."},
+  ];
+  return `
+  ${sectionHdr("📋","Weekly Review","Reflect. Learn. Adjust. Repeat — every Sunday.")}
+  <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:14px;margin-bottom:16px">
+    <div style="font-size:12px;color:var(--gold);font-weight:700">📅 Week of ${thisWeek}</div>
+    <div style="font-size:10px;color:var(--gold-dk);margin-top:2px;font-style:italic">Fill this out every Sunday. 10 minutes that changes everything.</div>
+  </div>
+  ${fieldDefs.map(f=>`
+    <div class="card" style="margin-bottom:10px;border-left:4px solid ${f.c}">
+      <div style="font-size:12px;color:var(--gold-soft);font-weight:700;margin-bottom:8px">${f.e} ${f.t}</div>
+      <textarea style="min-height:88px;font-size:12px;line-height:1.7" placeholder="${f.ph}"
+        data-action="review-field" data-week="${thisWeek}" data-field="${f.k}">${existing[f.k]||""}</textarea>
+    </div>`).join("")}
+  <div class="card" style="text-align:center;margin-bottom:14px">
+    <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px">⭐ Rate Your Week</div>
+    <div style="display:flex;justify-content:center;gap:10px;font-size:32px">
+      ${[1,2,3,4,5].map(n=>`<span style="cursor:pointer;opacity:${(existing.rating||0)>=n?1:.25};transition:all .2s"
+        data-action="review-rating" data-week="${thisWeek}" data-rating="${n}">⭐</span>`).join("")}
+    </div>
+    <div style="font-size:10px;color:var(--gold-dk);margin-top:6px">${existing.rating||0}/5</div>
+  </div>
+  ${reviews.length>0?`<div class="card">
+    <div class="card-title">📚 Past Reviews (${reviews.length})</div>
+    ${reviews.slice().reverse().slice(0,6).map(r=>`
+      <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:12px;color:var(--gold);font-weight:700">${r.week}</div>
+          <div>${r.rating?"⭐".repeat(r.rating):""}</div>
+        </div>
+        ${r.wins?`<div style="font-size:11px;color:${C.green};margin-top:3px">🏆 ${r.wins.substring(0,90)}${r.wins.length>90?"...":""}</div>`:""}
+        ${r.intentions?`<div style="font-size:10px;color:var(--gold-dk);margin-top:2px;font-style:italic">→ ${r.intentions.substring(0,80)}...</div>`:""}
+      </div>`).join("")}
+  </div>`:""}`;
+}
+
+function getWeekLabel(){
+  const d=new Date(); const start=new Date(d);
+  start.setDate(d.getDate()-d.getDay()+1);
+  return start.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+}
+
+function renderGoals(){
+  const goals = S.goals||[];
+  return `
+  ${sectionHdr("🎯","Goals & Microtasks","Break every big goal into small daily actions.")}
+  ${goals.map((g,gi)=>{
+    const done=g.microtasks.filter(m=>m.done).length;
+    const p=pct(done,g.microtasks.length||1);
+    return`<div class="card" style="border-left:4px solid ${C.gold};margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="flex:1">
+          <div style="font-size:15px;color:var(--gold-soft);font-weight:700;font-family:'Cormorant Garamond',serif">${g.title}</div>
+          <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">${tag(g.area,C.gold)} · 📅 ${g.deadline||"No deadline"}</div>
+          ${g.why?`<div style="font-size:11px;color:var(--gold-dk);margin-top:4px;font-style:italic">"${g.why}"</div>`:""}
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:4px"
+          data-action="edit-goal" data-idx="${gi}">✏️</button>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:10px;color:var(--gold-dk)">Progress</span>
+          <span style="font-size:10px;color:var(--gold);font-weight:700">${done}/${g.microtasks.length} tasks · ${p}%</span>
+        </div>
+        ${bar(p,C.gold,8)}
+      </div>
+      <div style="font-size:10px;color:var(--gold-dk);letter-spacing:1px;font-weight:700;margin-bottom:6px">MICROTASKS</div>
+      ${g.microtasks.map((mt,mi)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer"
+          data-action="toggle-microtask" data-goal="${gi}" data-task="${mi}">
+          ${chkBox(mt.done,C.gold,20)}
+          <span style="font-size:12px;color:${mt.done?"var(--gray-lt)":"var(--gold-soft)"};text-decoration:${mt.done?"line-through":"none"};flex:1">${mt.task}</span>
+        </div>`).join("")}
+      <button style="background:none;border:none;color:var(--gold-dk);font-size:11px;cursor:pointer;margin-top:10px;font-family:Montserrat,sans-serif;font-weight:600;letter-spacing:1px"
+        data-action="add-microtask" data-idx="${gi}">+ Add microtask</button>
+    </div>`;}).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-goal">+ Add New Goal</button>`;
+}
+
+function renderBucketList(){
+  const bdone=S.bucketList.filter(b=>b.done).length;
+  const h100items=S.hundredThings.filter(h=>h.item);
+  const h100done=h100items.filter(h=>h.done).length;
+  return `
+  ${sectionHdr("🪣","Bucket List & 100 Things 2026","Dream it. Plan it. Do it.")}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    ${statCard("Bucket List",`${bdone}/${S.bucketList.length}`,"completed",C.gold,pct(bdone,S.bucketList.length))}
+    ${statCard("100 Things",`${h100done}/${h100items.length||100}`,"done",C.green,pct(h100done,h100items.length||100))}
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">🌍 Bucket List</div>
+    ${S.bucketList.map((b,i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div data-action="toggle-bucket" data-idx="${i}"
+          style="width:24px;height:24px;border-radius:50%;border:2px solid ${b.done?C.gold:"rgba(201,168,76,.3)"};
+          background:${b.done?C.gold:"transparent"};display:flex;align-items:center;justify-content:center;
+          cursor:pointer;font-size:11px;color:var(--navy);font-weight:700;flex-shrink:0;transition:all .2s">${b.done?"✓":""}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;color:${b.done?"var(--gray-lt)":"var(--gold-soft)"};text-decoration:${b.done?"line-through":"none"}">${b.item}</div>
+          <div style="font-size:9px;color:var(--gray-lt);margin-top:1px">${b.category} · ${b.year}</div>
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-bucket" data-idx="${i}">✏️</button>
+      </div>`).join("")}
+    <button class="btn btn-outline btn-block" style="margin-top:10px" data-action="add-bucket">+ Add to Bucket List</button>
+  </div>
+  <div class="card">
+    <div class="card-title">💯 100 Things to Do in 2026 <span style="font-size:10px;color:var(--gold-dk);font-weight:400">(${h100done}/${h100items.length} done)</span></div>
+    <div style="font-size:10px;color:var(--gold-dk);margin-bottom:12px;font-style:italic">Type your items. Tap the checkbox to mark done.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+      ${S.hundredThings.map((h,i)=>`
+        <div style="display:flex;align-items:center;gap:5px;padding:6px 8px;border-radius:8px;
+          background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:9px;color:var(--gold-dk);min-width:16px;font-weight:700">${i+1}</span>
+          <input value="${h.item||""}" placeholder="Item ${i+1}..."
+            style="font-size:10px;padding:2px 4px;flex:1;background:transparent;border:none;
+            border-bottom:1px solid rgba(201,168,76,.12);border-radius:0;
+            color:${h.done?"var(--gray-lt)":"var(--gold-soft)"};outline:none;"
+            data-action="hundred-item" data-idx="${i}"/>
+          ${h.item?`<div data-action="toggle-hundred" data-idx="${i}"
+            style="width:15px;height:15px;border-radius:3px;border:1.5px solid ${h.done?C.gold:"rgba(201,168,76,.3)"};
+            background:${h.done?C.gold:"transparent"};cursor:pointer;flex-shrink:0;
+            display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--navy);font-weight:700">${h.done?"✓":""}</div>`:""}
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderReading(){
+  const statusColors={"Reading":C.gold,"Read":C.green,"Want to Read":C.blue,"Paused":C.orange};
+  const byS=(s)=>S.readingList.filter(b=>b.status===s);
+  return `
+  ${sectionHdr("📚","Reading List","Feed your mind every day.")}
+  <div class="stat-grid g3" style="margin-bottom:14px">
+    ${statCard("Reading",byS("Reading").length,"active",C.gold)}
+    ${statCard("Read",byS("Read").length,"completed",C.green)}
+    ${statCard("To Read",byS("Want to Read").length,"queued",C.blue)}
+  </div>
+  ${["Reading","Want to Read","Read","Paused"].map(status=>{
+    const books=byS(status); if(!books.length) return "";
+    return`<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${statusColors[status]}"></div>
+        <div class="card-title" style="margin:0;font-size:12px">${status}</div>
+        <span style="font-size:10px;color:var(--gray-lt)">${books.length}</span>
+      </div>
+      ${books.map(b=>{const gi=S.readingList.indexOf(b);return`
+        <div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--gold-soft);font-weight:700;font-family:'Cormorant Garamond',serif">${b.title}</div>
+              <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">by ${b.author} · ${b.category}</div>
+              ${b.rating?`<div style="font-size:11px;margin-top:3px">${"⭐".repeat(Number(b.rating)||0)}</div>`:""}
+              ${b.notes?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:2px">${b.notes}</div>`:""}
+            </div>
+            <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+              data-action="edit-book" data-idx="${gi}">✏️</button>
+          </div>
+        </div>`; }).join("")}
+    </div>`;}).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-book">+ Add a Book</button>`;
+}
+
+function renderRituals(){
+  const active=S.rituals.filter(r=>r.active).length;
+  return `
+  ${sectionHdr("🔮","Ritual Days","Your daily and weekly rituals build the life you want.")}
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="card-title" style="margin:0">Active Rituals</div>
+      <span style="font-size:12px;color:${C.purple};font-weight:700">${active}/${S.rituals.length}</span>
+    </div>
+    ${bar(pct(active,S.rituals.length),C.purple,8)}
+  </div>
+  ${S.rituals.map((r,i)=>`
+    <div class="card" style="border-left:4px solid ${r.active?C.purple:"rgba(255,255,255,.1)"};margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div data-action="toggle-ritual" data-idx="${i}"
+          style="width:26px;height:26px;border-radius:50%;border:2px solid ${r.active?C.purple:"rgba(255,255,255,.2)"};
+          background:${r.active?C.purple:"transparent"};display:flex;align-items:center;justify-content:center;
+          cursor:pointer;font-size:12px;color:white;font-weight:700;flex-shrink:0;margin-top:2px;transition:all .2s">${r.active?"✓":""}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;color:var(--gold-soft);font-weight:700">${r.name}</div>
+          <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">🕐 ${r.time} · ${r.days.join(", ")}</div>
+          ${r.notes?`<div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-top:3px">${r.notes}</div>`:""}
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-ritual" data-idx="${i}">✏️</button>
+      </div>
+    </div>`).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-ritual">+ Add Ritual</button>`;
+}
+
+function renderCelebrations(){
+  return `
+  ${sectionHdr("🎉","Celebrations & Boundaries","Honor who you are. Protect your peace.")}
+  <div class="card" style="background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.02));border:1px solid rgba(201,168,76,.35);margin-bottom:14px">
+    <div class="card-title">🎉 Things I Celebrate About Myself</div>
+    <div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">Read these when you need a reminder of how powerful you are.</div>
+    ${(S.celebrations||[]).map((c,i)=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(201,168,76,.1)">
+        <span style="font-size:15px;margin-top:2px">✨</span>
+        <div style="flex:1;font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--gold-soft);font-style:italic;line-height:1.5">${c}</div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-celebration" data-idx="${i}">✏️</button>
+      </div>`).join("")}
+    <button class="btn btn-outline btn-block" style="margin-top:12px" data-action="add-celebration">+ Add Celebration</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🛡️ My Boundaries</div>
+    <div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">Non-negotiable. These protect your energy and peace.</div>
+    ${(S.boundaries||[]).map((b,i)=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div data-action="toggle-boundary" data-idx="${i}"
+          style="width:22px;height:22px;border-radius:50%;border:2px solid ${b.active?C.green:"rgba(255,255,255,.2)"};
+          background:${b.active?C.green:"transparent"};display:flex;align-items:center;justify-content:center;
+          cursor:pointer;font-size:11px;color:white;font-weight:700;flex-shrink:0;margin-top:2px;transition:all .2s">${b.active?"✓":""}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:${b.active?"var(--gold-soft)":"var(--gray-lt)"};line-height:1.4">${b.boundary}</div>
+          <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">${tag(b.area,C.green)}</div>
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-boundary" data-idx="${i}">✏️</button>
+      </div>`).join("")}
+    <button class="btn btn-outline btn-block" style="margin-top:12px" data-action="add-boundary">+ Add Boundary</button>
+  </div>`;
+}
+
+function renderParenting(){
+  const done=S.parenting.filter(p=>p.done).length;
+  return `
+  ${sectionHdr("👨‍👧","Parenting & Family","Sage deserves your full presence.")}
+  <div class="card" style="background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(236,72,153,.02));border:1px solid rgba(236,72,153,.3);margin-bottom:14px;text-align:center;padding:22px">
+    <div style="font-size:32px;margin-bottom:6px">💝</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:19px;color:${C.pink};font-style:italic;line-height:1.5">"The most precious gift you can give Sage is your presence."</div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <div class="card-title" style="margin:0">Connection Tasks</div>
+      <span style="font-size:11px;color:${C.green};font-weight:700">${done}/${S.parenting.length} done</span>
+    </div>
+    ${bar(pct(done,S.parenting.length),C.pink,8)}
+  </div>
+  ${(S.parenting||[]).map((p,i)=>`
+    <div class="card" style="border-left:4px solid ${p.done?C.green:C.pink};margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div data-action="toggle-parenting" data-idx="${i}"
+          style="width:26px;height:26px;border-radius:50%;border:2px solid ${p.done?C.green:C.pink};
+          background:${p.done?C.green:"transparent"};display:flex;align-items:center;justify-content:center;
+          cursor:pointer;font-size:13px;color:white;font-weight:700;flex-shrink:0;margin-top:2px;transition:all .2s">${p.done?"✓":""}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:${p.done?"var(--gray-lt)":"var(--gold-soft)"};font-weight:700;text-decoration:${p.done?"line-through":"none"}">${p.task}</div>
+          <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">${tag(p.frequency,C.pink)}</div>
+          ${p.notes?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:3px">${p.notes}</div>`:""}
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-parenting" data-idx="${i}">✏️</button>
+      </div>
+    </div>`).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-parenting">+ Add Connection Task</button>`;
+}
+
+function renderEducation(){
+  const statusC={"In Progress":C.gold,"Completed":C.green,"Want to Start":C.blue,"Paused":C.orange};
+  return `
+  ${sectionHdr("🎓","Education & Learning","Invest in your mind. It pays the best interest.")}
+  <div class="stat-grid g3" style="margin-bottom:14px">
+    ${statCard("Active",S.education.filter(e=>e.status==="In Progress").length,"in progress",C.gold)}
+    ${statCard("Done",S.education.filter(e=>e.status==="Completed").length,"completed",C.green)}
+    ${statCard("Queued",S.education.filter(e=>e.status==="Want to Start").length,"to start",C.blue)}
+  </div>
+  ${(S.education||[]).map((e,i)=>`
+    <div class="card" style="border-left:4px solid ${statusC[e.status]||C.gold};margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:14px;color:var(--gold-soft);font-weight:700">${e.course}</div>
+          <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">${e.platform} · ${tag(e.status,statusC[e.status]||C.gold)}</div>
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-education" data-idx="${i}">✏️</button>
+      </div>
+      ${e.status==="In Progress"?`<div style="margin-top:4px">${bar(Number(e.progress)||0,statusC[e.status],7)}</div>`:""}
+      ${e.notes?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:5px">${e.notes}</div>`:""}
+    </div>`).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-education">+ Add Course / Learning</button>`;
+}
+
+function renderResources(){
+  const typeC={Community:C.gold,Reference:C.blue,Tool:C.green,Platform:C.purple,Course:C.orange,Book:C.pink,Other:C.teal};
+  return `
+  ${sectionHdr("🗂️","Resource List","Your toolkit — everything in one place.")}
+  <div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-bottom:14px">Links, tools, communities, references. Find anything fast.</div>
+  ${(S.resources||[]).map((r,i)=>`
+    <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${typeC[r.type]||C.gold};flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:var(--gold-soft);font-weight:700">${r.name}</div>
+        <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">${tag(r.type,typeC[r.type]||C.gold)}${r.notes?` · ${r.notes}`:""}</div>
+        ${r.url?`<a href="${r.url}" target="_blank" rel="noopener"
+          style="font-size:10px;color:${C.blue};margin-top:2px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.url}</a>`:""}
+      </div>
+      <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;flex-shrink:0"
+        data-action="edit-resource" data-idx="${i}">✏️</button>
+    </div>`).join("")}
+  <button class="btn btn-outline btn-block" style="margin-top:8px" data-action="add-resource">+ Add Resource</button>`;
+}
+
+// ══════════════════════════════════════════════════════════════
 const RENDERS = {
   dashboard:    renderDashboard,
   priorities:   renderPriorities,
@@ -1380,6 +1841,18 @@ const RENDERS = {
   marketing:    renderMarketing,
   appointments: renderAppointments,
   affirmations: renderAffirmations,
+  mission:      renderMission,
+  vision:       renderVisionBoard,
+  weeklyreview: renderWeeklyReview,
+  goals:        renderGoals,
+  bucketlist:   renderBucketList,
+  reading:      renderReading,
+  rituals:      renderRituals,
+  celebrations: renderCelebrations,
+  boundaries:   renderCelebrations,
+  parenting:    renderParenting,
+  education:    renderEducation,
+  resources:    renderResources,
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -1523,6 +1996,182 @@ function handleClick(e){
 
     case "goto":
       switchTab(el.dataset.goto||"dashboard"); break;
+
+    // ── NEW MODULE HANDLERS ──
+    case "toggle-bucket":
+      S.bucketList[idx].done = !S.bucketList[idx].done;
+      save(); render(); break;
+
+    case "toggle-hundred":
+      S.hundredThings[idx].done = !S.hundredThings[idx].done;
+      save(); render(); break;
+
+    case "toggle-microtask": {
+      const gi = parseInt(el.dataset.goal), ti = parseInt(el.dataset.task);
+      S.goals[gi].microtasks[ti].done = !S.goals[gi].microtasks[ti].done;
+      save(); render(); break;
+    }
+    case "toggle-ritual":
+      S.rituals[idx].active = !S.rituals[idx].active;
+      save(); render(); break;
+
+    case "toggle-boundary":
+      S.boundaries[idx].active = !S.boundaries[idx].active;
+      save(); render(); break;
+
+    case "toggle-parenting":
+      S.parenting[idx].done = !S.parenting[idx].done;
+      save(); render(); break;
+
+    case "review-rating": {
+      const week = el.dataset.week; const rating = parseInt(el.dataset.rating);
+      let r = S.weeklyReviews.find(x=>x.week===week);
+      if(!r){ r={week,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:5}; S.weeklyReviews.push(r); }
+      r.rating = rating; save(); render(); break;
+    }
+    case "add-microtask": {
+      const gi = parseInt(el.dataset.idx);
+      openModal("Add Microtask",[
+        {key:"task",label:"Task",val:"",placeholder:"What's the next small step?"},
+      ], vals => { S.goals[gi].microtasks.push({task:vals.task,done:false}); }); break;
+    }
+    case "add-goal":
+      openModal("Add New Goal",[
+        {key:"title",label:"Goal Title",val:"",placeholder:"What do you want to achieve?"},
+        {key:"area",label:"Life Area",val:"",placeholder:"e.g. Wealth, Health, Business"},
+        {key:"deadline",label:"Target Date",val:"",type:"date"},
+        {key:"why",label:"Why This Matters",val:"",placeholder:"Your deeper reason..."},
+      ], vals => { S.goals.push({...vals,microtasks:[]}); }); break;
+
+    case "edit-goal":
+      openModal("Edit Goal",[
+        {key:"title",label:"Goal Title",val:S.goals[idx].title},
+        {key:"area",label:"Life Area",val:S.goals[idx].area},
+        {key:"deadline",label:"Target Date",val:S.goals[idx].deadline,type:"date"},
+        {key:"why",label:"Why This Matters",val:S.goals[idx].why},
+      ], vals => { Object.assign(S.goals[idx],vals); }); break;
+
+    case "add-bucket":
+      openModal("Add to Bucket List",[
+        {key:"item",label:"What do you want to do?",val:"",placeholder:"Your bucket list item..."},
+        {key:"category",label:"Category",val:"",placeholder:"e.g. Travel, Wealth, Family"},
+        {key:"year",label:"Year",val:"2026"},
+      ], vals => { S.bucketList.push({...vals,done:false}); }); break;
+
+    case "edit-bucket":
+      openModal("Edit Bucket List Item",[
+        {key:"item",label:"Item",val:S.bucketList[idx].item},
+        {key:"category",label:"Category",val:S.bucketList[idx].category},
+        {key:"year",label:"Year",val:S.bucketList[idx].year},
+      ], vals => { Object.assign(S.bucketList[idx],vals); }); break;
+
+    case "add-book":
+      openModal("Add a Book",[
+        {key:"title",label:"Book Title",val:"",placeholder:"Title"},
+        {key:"author",label:"Author",val:"",placeholder:"Author name"},
+        {key:"category",label:"Category",val:"",placeholder:"e.g. Mindset, Wealth, Spiritual"},
+        {key:"status",label:"Status",type:"select",val:"Want to Read",
+          options:[{val:"Want to Read",label:"Want to Read"},{val:"Reading",label:"Reading"},{val:"Read",label:"Read"},{val:"Paused",label:"Paused"}]},
+      ], vals => { S.readingList.push({...vals,rating:0,notes:""}); }); break;
+
+    case "edit-book":
+      openModal("Edit Book",[
+        {key:"title",label:"Title",val:S.readingList[idx].title},
+        {key:"author",label:"Author",val:S.readingList[idx].author},
+        {key:"category",label:"Category",val:S.readingList[idx].category},
+        {key:"status",label:"Status",type:"select",val:S.readingList[idx].status,
+          options:[{val:"Want to Read",label:"Want to Read"},{val:"Reading",label:"Reading"},{val:"Read",label:"Read"},{val:"Paused",label:"Paused"}]},
+        {key:"rating",label:"Rating (1-5)",val:S.readingList[idx].rating,type:"number"},
+        {key:"notes",label:"Notes",val:S.readingList[idx].notes,placeholder:"Your takeaways..."},
+      ], vals => { Object.assign(S.readingList[idx],vals); }); break;
+
+    case "add-ritual":
+      openModal("Add Ritual",[
+        {key:"name",label:"Ritual Name",val:"",placeholder:"e.g. Morning Journaling"},
+        {key:"time",label:"Time",val:"",placeholder:"e.g. 6:00 AM"},
+        {key:"notes",label:"Notes / Description",val:"",placeholder:"What does this ritual involve?"},
+      ], vals => { S.rituals.push({...vals,days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],active:true}); }); break;
+
+    case "edit-ritual":
+      openModal("Edit Ritual",[
+        {key:"name",label:"Ritual Name",val:S.rituals[idx].name},
+        {key:"time",label:"Time",val:S.rituals[idx].time},
+        {key:"notes",label:"Notes",val:S.rituals[idx].notes},
+      ], vals => { Object.assign(S.rituals[idx],vals); }); break;
+
+    case "add-celebration":
+      openModal("Add a Celebration",[
+        {key:"item",label:"What do you celebrate about yourself?",val:"",placeholder:"I am proud that..."},
+      ], vals => { S.celebrations.push(vals.item); }); break;
+
+    case "edit-celebration":
+      openModal("Edit Celebration",[
+        {key:"item",label:"Celebration",val:S.celebrations[idx]},
+      ], vals => { S.celebrations[idx]=vals.item; }); break;
+
+    case "add-boundary":
+      openModal("Add a Boundary",[
+        {key:"boundary",label:"My Boundary",val:"",placeholder:"I do not / I will not / I protect..."},
+        {key:"area",label:"Life Area",val:"",placeholder:"e.g. Work, Mental Health, Business"},
+      ], vals => { S.boundaries.push({...vals,active:true}); }); break;
+
+    case "edit-boundary":
+      openModal("Edit Boundary",[
+        {key:"boundary",label:"Boundary",val:S.boundaries[idx].boundary},
+        {key:"area",label:"Area",val:S.boundaries[idx].area},
+      ], vals => { Object.assign(S.boundaries[idx],vals); }); break;
+
+    case "add-parenting":
+      openModal("Add Connection Task",[
+        {key:"task",label:"Task",val:"",placeholder:"e.g. Call Sage, Plan trip together"},
+        {key:"frequency",label:"Frequency",type:"select",val:"Weekly",
+          options:[{val:"Daily",label:"Daily"},{val:"Weekly",label:"Weekly"},{val:"Monthly",label:"Monthly"},{val:"Quarterly",label:"Quarterly"},{val:"Ongoing",label:"Ongoing"}]},
+        {key:"notes",label:"Notes",val:"",placeholder:"Ideas, details..."},
+      ], vals => { S.parenting.push({...vals,done:false}); }); break;
+
+    case "edit-parenting":
+      openModal("Edit Connection Task",[
+        {key:"task",label:"Task",val:S.parenting[idx].task},
+        {key:"frequency",label:"Frequency",type:"select",val:S.parenting[idx].frequency,
+          options:[{val:"Daily",label:"Daily"},{val:"Weekly",label:"Weekly"},{val:"Monthly",label:"Monthly"},{val:"Quarterly",label:"Quarterly"},{val:"Ongoing",label:"Ongoing"}]},
+        {key:"notes",label:"Notes",val:S.parenting[idx].notes},
+      ], vals => { Object.assign(S.parenting[idx],vals); }); break;
+
+    case "add-education":
+      openModal("Add Course / Learning",[
+        {key:"course",label:"Course / Book Title",val:"",placeholder:"What are you learning?"},
+        {key:"platform",label:"Platform / Source",val:"",placeholder:"e.g. Udemy, YouTube, Book"},
+        {key:"status",label:"Status",type:"select",val:"Want to Start",
+          options:[{val:"Want to Start",label:"Want to Start"},{val:"In Progress",label:"In Progress"},{val:"Completed",label:"Completed"},{val:"Paused",label:"Paused"}]},
+      ], vals => { S.education.push({...vals,progress:0,notes:""}); }); break;
+
+    case "edit-education":
+      openModal("Edit Education",[
+        {key:"course",label:"Course",val:S.education[idx].course},
+        {key:"platform",label:"Platform",val:S.education[idx].platform},
+        {key:"status",label:"Status",type:"select",val:S.education[idx].status,
+          options:[{val:"Want to Start",label:"Want to Start"},{val:"In Progress",label:"In Progress"},{val:"Completed",label:"Completed"},{val:"Paused",label:"Paused"}]},
+        {key:"progress",label:"Progress % (0-100)",val:S.education[idx].progress,type:"number"},
+        {key:"notes",label:"Notes",val:S.education[idx].notes},
+      ], vals => { Object.assign(S.education[idx],vals); }); break;
+
+    case "add-resource":
+      openModal("Add Resource",[
+        {key:"name",label:"Name",val:"",placeholder:"Resource name"},
+        {key:"type",label:"Type",type:"select",val:"Tool",
+          options:["Community","Reference","Tool","Platform","Course","Book","Other"].map(v=>({val:v,label:v}))},
+        {key:"url",label:"URL (optional)",val:"",placeholder:"https://..."},
+        {key:"notes",label:"Notes",val:"",placeholder:"What is this for?"},
+      ], vals => { S.resources.push(vals); }); break;
+
+    case "edit-resource":
+      openModal("Edit Resource",[
+        {key:"name",label:"Name",val:S.resources[idx].name},
+        {key:"type",label:"Type",type:"select",val:S.resources[idx].type,
+          options:["Community","Reference","Tool","Platform","Course","Book","Other"].map(v=>({val:v,label:v}))},
+        {key:"url",label:"URL",val:S.resources[idx].url||""},
+        {key:"notes",label:"Notes",val:S.resources[idx].notes||""},
+      ], vals => { Object.assign(S.resources[idx],vals); }); break;
   }
 }
 
@@ -1553,32 +2202,103 @@ function handleInput(e){
       S.vision[idx].metric = el.value;
       save(); break;
     }
+    case "vision-goals": {
+      const idx = parseInt(el.dataset.idx);
+      S.vision[idx].goals = el.value;
+      save(); break;
+    }
+    case "vision-intentions": {
+      const idx = parseInt(el.dataset.idx);
+      S.vision[idx].intentions = el.value;
+      save(); break;
+    }
+    case "mission-field": {
+      S.mission[el.dataset.field] = el.value;
+      save(); break;
+    }
+    case "review-field": {
+      const week = el.dataset.week;
+      const field = el.dataset.field;
+      let r = S.weeklyReviews.find(x=>x.week===week);
+      if(!r){ r={week,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:5}; S.weeklyReviews.push(r); }
+      r[field] = el.value;
+      save(); break;
+    }
+    case "hundred-item": {
+      const idx = parseInt(el.dataset.idx);
+      S.hundredThings[idx].item = el.value;
+      save(); break;
+    }
   }
 }
 
 // ══════════════════════════════════════════════════════════════
-// TAB SWITCHING
+// TAB GROUP SYSTEM
 // ══════════════════════════════════════════════════════════════
+const TAB_GROUPS = {
+  daily: [
+    {id:"dashboard",   icon:"⌂",  label:"Home"},
+    {id:"priorities",  icon:"⭐", label:"Priorities"},
+    {id:"schedule",    icon:"🕐", label:"Schedule"},
+    {id:"wellness",    icon:"🌿", label:"Wellness"},
+    {id:"meditation",  icon:"🧘", label:"Meditation"},
+    {id:"meals",       icon:"🥗", label:"Meals"},
+    {id:"affirmations",icon:"🙏", label:"Affirm"},
+  ],
+  build: [
+    {id:"revenue",     icon:"📈", label:"Revenue"},
+    {id:"marketing",   icon:"📣", label:"Marketing"},
+    {id:"bills",       icon:"💳", label:"Bills"},
+    {id:"debt",        icon:"📉", label:"Debt"},
+    {id:"savings",     icon:"💰", label:"Savings"},
+    {id:"appointments",icon:"📅", label:"Appts"},
+  ],
+  grow: [
+    {id:"mission",     icon:"🌟", label:"Mission"},
+    {id:"vision",      icon:"🎯", label:"Vision"},
+    {id:"weeklyreview",icon:"📋", label:"Review"},
+    {id:"goals",       icon:"🎯", label:"Goals"},
+    {id:"bucketlist",  icon:"🪣", label:"Bucket List"},
+    {id:"reading",     icon:"📚", label:"Reading"},
+    {id:"rituals",     icon:"🔮", label:"Rituals"},
+    {id:"celebrations",icon:"🎉", label:"Celebrate"},
+    {id:"boundaries",  icon:"🛡️", label:"Boundaries"},
+    {id:"parenting",   icon:"👨‍👧", label:"Parenting"},
+    {id:"education",   icon:"🎓", label:"Education"},
+    {id:"resources",   icon:"🗂️", label:"Resources"},
+  ],
+};
+
+let currentGroup = "daily";
+let currentTab   = "dashboard";
+
+function switchGroup(group){
+  currentGroup = group;
+  document.querySelectorAll(".tab-group-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.group === group));
+  // Switch to first tab of group
+  const firstTab = TAB_GROUPS[group][0].id;
+  renderTabBar(group);
+  switchTab(firstTab);
+}
+
+function renderTabBar(group){
+  const bar = document.getElementById("tabbar");
+  bar.innerHTML = TAB_GROUPS[group].map(t =>
+    `<button class="tab ${t.id===currentTab?"active":""}" data-tab="${t.id}"
+      onclick="switchTab('${t.id}')">${t.icon} ${t.label}</button>`
+  ).join("");
+}
+
 function switchTab(id){
   currentTab = id;
-  document.querySelectorAll(".tab").forEach(t => {
-    t.classList.toggle("active", t.dataset.tab === id);
-  });
-  $("content").scrollTop = 0;
+  document.querySelectorAll(".tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.tab === id));
+  document.getElementById("content").scrollTop = 0;
   render();
-  // Scroll active tab into view
   const activeTab = document.querySelector(".tab.active");
   if(activeTab) activeTab.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
 }
-
-document.querySelectorAll(".tab").forEach(t => {
-  t.addEventListener("click", () => switchTab(t.dataset.tab));
-});
-
-// Close modal on overlay click
-$("modal-overlay").addEventListener("click", e => {
-  if(e.target === $("modal-overlay")) closeModal();
-});
 
 // ══════════════════════════════════════════════════════════════
 // SYNC PANEL — open/close + status card
@@ -1996,6 +2716,7 @@ function bootAuth(){
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
+renderTabBar("daily");
 bootAuth();
 </script>
 </body>
