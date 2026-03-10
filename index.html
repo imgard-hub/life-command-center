@@ -242,9 +242,125 @@ textarea{resize:vertical;min-height:70px;}
   .sched-grid{grid-template-columns:repeat(4,1fr);}
   .vision-grid{grid-template-columns:1fr;}
 }
+
+/* ── LOGIN SCREEN ── */
+#lock-screen{
+  position:fixed;inset:0;z-index:1000;
+  background:linear-gradient(160deg,#0D1B2A 0%,#1A2E45 60%,#0D1B2A 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;
+}
+#lock-screen.hidden{display:none;}
+.lock-crown{font-size:52px;margin-bottom:16px;animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+.lock-title{
+  font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;
+  color:var(--gold);letter-spacing:3px;text-align:center;margin-bottom:4px;
+}
+.lock-sub{font-size:11px;color:var(--gold-dk);letter-spacing:1px;margin-bottom:40px;font-style:italic;}
+.lock-box{
+  width:100%;max-width:340px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(201,168,76,.25);
+  border-radius:20px;padding:28px 24px;
+}
+.lock-label{font-size:10px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:8px;font-weight:600;}
+.lock-input{
+  width:100%;background:rgba(255,255,255,.07);
+  border:1px solid rgba(201,168,76,.3);border-radius:10px;
+  padding:14px 16px;color:var(--gold-soft);
+  font-family:'Montserrat',sans-serif;font-size:16px;
+  outline:none;letter-spacing:3px;text-align:center;
+  box-sizing:border-box;transition:border-color .2s;
+}
+.lock-input:focus{border-color:var(--gold);}
+.lock-btn{
+  width:100%;margin-top:16px;padding:15px;
+  background:linear-gradient(135deg,var(--gold-dk),var(--gold));
+  border:none;border-radius:12px;
+  color:var(--navy);font-family:'Montserrat',sans-serif;
+  font-size:14px;font-weight:700;letter-spacing:2px;
+  cursor:pointer;transition:opacity .2s;
+}
+.lock-btn:active{opacity:.85;}
+.lock-error{
+  font-size:11px;color:#EF4444;text-align:center;
+  margin-top:10px;min-height:18px;font-weight:600;
+}
+.lock-forgot{
+  font-size:10px;color:var(--gold-dk);text-align:center;
+  margin-top:14px;cursor:pointer;text-decoration:underline;
+}
+.lock-setup-note{
+  font-size:10px;color:var(--gold-dk);text-align:center;
+  margin-top:16px;line-height:1.7;
+}
+/* Lock button in header */
+#lock-btn{
+  background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);
+  border-radius:10px;padding:7px 10px;cursor:pointer;
+  font-size:15px;color:var(--gold-dk);transition:all .2s;flex-shrink:0;
+}
+#lock-btn:hover{background:rgba(201,168,76,.2);color:var(--gold);}
+/* Inactivity warning bar */
+#inactivity-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:900;
+  background:rgba(245,158,11,.15);border-top:1px solid rgba(245,158,11,.4);
+  padding:8px 16px;display:none;align-items:center;justify-content:space-between;
+}
+#inactivity-bar.show{display:flex;}
 </style>
 </head>
 <body>
+
+<!-- ── LOCK SCREEN ── -->
+<div id="lock-screen">
+  <div class="lock-crown">👑</div>
+  <div class="lock-title">✦ LIFE COMMAND CENTER ✦</div>
+  <div class="lock-sub" id="lock-sub-text">Your personal life operating system</div>
+
+  <!-- FIRST-TIME SETUP -->
+  <div id="lock-setup" class="lock-box" style="display:none">
+    <div class="lock-label">CREATE YOUR PASSWORD</div>
+    <input class="lock-input" id="setup-pw1" type="password" placeholder="Choose a password" style="letter-spacing:1px;text-align:left;margin-bottom:10px"/>
+    <div class="lock-label" style="margin-top:4px">CONFIRM PASSWORD</div>
+    <input class="lock-input" id="setup-pw2" type="password" placeholder="Confirm password" style="letter-spacing:1px;text-align:left"/>
+    <button class="lock-btn" onclick="setupPassword()">Set Password &amp; Enter →</button>
+    <div class="lock-error" id="setup-error"></div>
+    <div class="lock-setup-note">This password protects your app on shared devices.<br/>Store it somewhere safe — you'll need it every time you open the app.</div>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <div id="lock-login" class="lock-box" style="display:none">
+    <div class="lock-label">ENTER YOUR PASSWORD</div>
+    <input class="lock-input" id="login-pw" type="password" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') attemptLogin()"/>
+    <button class="lock-btn" onclick="attemptLogin()">Unlock →</button>
+    <div class="lock-error" id="login-error"></div>
+    <div class="lock-forgot" onclick="showForgotOptions()">Forgot password?</div>
+  </div>
+
+  <!-- FORGOT OPTIONS -->
+  <div id="lock-forgot-panel" class="lock-box" style="display:none">
+    <div style="font-size:13px;color:var(--gold);font-weight:700;margin-bottom:10px">🔑 Forgot Password</div>
+    <div style="font-size:11px;color:var(--gold-dk);line-height:1.8;margin-bottom:16px">
+      If you've forgotten your password, you can reset it below.<br/>
+      <strong style="color:#EF4444">⚠️ Warning:</strong> Resetting requires clearing all local data on this device. Your cloud data (Supabase) stays safe and will re-sync after you set a new password.
+    </div>
+    <button onclick="resetPassword()" style="width:100%;padding:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:10px;color:#EF4444;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px">
+      Reset Password &amp; Clear Local Data
+    </button>
+    <button onclick="showLoginForm()" style="width:100%;padding:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:10px;color:var(--gold);font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer">
+      ← Back to Login
+    </button>
+  </div>
+</div>
+
+<!-- ── INACTIVITY WARNING ── -->
+<div id="inactivity-bar">
+  <span style="font-size:11px;color:#F59E0B;font-weight:600">⏱ Locking in <span id="countdown">60</span>s due to inactivity</span>
+  <button onclick="resetInactivity()" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);border-radius:6px;padding:4px 12px;color:#F59E0B;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer">Stay Unlocked</button>
+</div>
 
 <!-- HEADER -->
 <div id="header">
@@ -260,6 +376,7 @@ textarea{resize:vertical;min-height:70px;}
     <button onclick="openSync()" title="Sync / Backup" style="position:relative;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.35);border-radius:10px;padding:7px 10px;cursor:pointer;font-size:16px;color:var(--gold);transition:all .2s;flex-shrink:0">☁️
       <span id="sync-indicator" style="position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4A4A4A;border:1.5px solid var(--navy-mid)"></span>
     </button>
+    <button id="lock-btn" onclick="lockApp()" title="Lock app">🔒</button>
   </div>
 </div>
 
@@ -1695,11 +1812,191 @@ function showSyncToast(msg){
 }
 
 // ══════════════════════════════════════════════════════════════
+// AUTH — PASSWORD + AUTO-LOCK
+// ══════════════════════════════════════════════════════════════
+const AUTH_KEY        = "lcc_auth_hash";
+const INACTIVITY_MS   = 15 * 60 * 1000;  // 15 minutes
+const WARNING_BEFORE  = 60 * 1000;        // warn 60s before lock
+let   isUnlocked      = false;
+let   inactivityTimer = null;
+let   warningTimer    = null;
+let   countdownTimer  = null;
+
+// Simple hash — not cryptographic but stops casual snooping
+async function hashPassword(pw){
+  const enc  = new TextEncoder().encode(pw + "lcc_salt_2024");
+  const buf  = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function getStoredHash(){ return localStorage.getItem(AUTH_KEY); }
+
+// ── Setup (first time) ────────────────────────────────────────
+async function setupPassword(){
+  const pw1 = document.getElementById("setup-pw1").value;
+  const pw2 = document.getElementById("setup-pw2").value;
+  const err = document.getElementById("setup-error");
+  if(pw1.length < 6){ err.textContent = "Password must be at least 6 characters."; return; }
+  if(pw1 !== pw2)   { err.textContent = "Passwords don't match. Try again."; return; }
+  const hash = await hashPassword(pw1);
+  localStorage.setItem(AUTH_KEY, hash);
+  err.textContent = "";
+  unlockApp();
+}
+
+// ── Login ─────────────────────────────────────────────────────
+async function attemptLogin(){
+  const pw  = document.getElementById("login-pw").value;
+  const err = document.getElementById("login-error");
+  if(!pw){ err.textContent = "Please enter your password."; return; }
+  const hash   = await hashPassword(pw);
+  const stored = getStoredHash();
+  if(hash === stored){
+    err.textContent = "";
+    document.getElementById("login-pw").value = "";
+    unlockApp();
+  } else {
+    err.textContent = "Incorrect password. Try again.";
+    document.getElementById("login-pw").value = "";
+    document.getElementById("login-pw").focus();
+    // Shake animation
+    const inp = document.getElementById("login-pw");
+    inp.style.borderColor = "#EF4444";
+    setTimeout(() => inp.style.borderColor = "", 800);
+  }
+}
+
+// ── Unlock ────────────────────────────────────────────────────
+function unlockApp(){
+  isUnlocked = true;
+  document.getElementById("lock-screen").classList.add("hidden");
+  document.getElementById("header").style.display = "";
+  document.getElementById("tabbar").style.display = "";
+  document.getElementById("content").style.display = "";
+  startInactivityTimer();
+  render();
+  setSyncIndicator(sbReady ? "idle" : "unconfigured");
+  if(sbReady) pullFromCloud();
+}
+
+// ── Lock ──────────────────────────────────────────────────────
+function lockApp(){
+  isUnlocked = false;
+  clearInactivityTimers();
+  hideInactivityBar();
+  // Close any open modals
+  document.getElementById("sync-overlay").style.display   = "none";
+  document.getElementById("modal-overlay").style.display  = "none";
+  // Show lock screen
+  document.getElementById("lock-screen").classList.remove("hidden");
+  document.getElementById("header").style.display = "none";
+  document.getElementById("tabbar").style.display = "none";
+  document.getElementById("content").style.display = "none";
+  showLoginForm();
+  setTimeout(() => document.getElementById("login-pw")?.focus(), 100);
+}
+
+// ── Show correct lock panel ───────────────────────────────────
+function showLoginForm(){
+  document.getElementById("lock-setup").style.display        = "none";
+  document.getElementById("lock-login").style.display        = "block";
+  document.getElementById("lock-forgot-panel").style.display = "none";
+}
+function showForgotOptions(){
+  document.getElementById("lock-login").style.display        = "none";
+  document.getElementById("lock-forgot-panel").style.display = "block";
+}
+function resetPassword(){
+  if(!confirm("Reset your password?\n\nThis clears your local data on this device.\nYour cloud data (Supabase) stays safe.\n\nAre you sure?")) return;
+  localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem("lcc_state");
+  document.getElementById("lock-forgot-panel").style.display = "none";
+  document.getElementById("lock-setup").style.display        = "block";
+  document.getElementById("lock-sub-text").textContent       = "Set a new password to continue";
+}
+
+// ── Inactivity timer ──────────────────────────────────────────
+function startInactivityTimer(){
+  clearInactivityTimers();
+  // Show warning 60s before lock
+  warningTimer = setTimeout(() => {
+    showInactivityBar();
+    let secs = 60;
+    document.getElementById("countdown").textContent = secs;
+    countdownTimer = setInterval(() => {
+      secs--;
+      const el = document.getElementById("countdown");
+      if(el) el.textContent = secs;
+      if(secs <= 0){ clearInterval(countdownTimer); lockApp(); }
+    }, 1000);
+  }, INACTIVITY_MS - WARNING_BEFORE);
+
+  // Hard lock after full timeout
+  inactivityTimer = setTimeout(lockApp, INACTIVITY_MS);
+}
+
+function clearInactivityTimers(){
+  clearTimeout(inactivityTimer);
+  clearTimeout(warningTimer);
+  clearInterval(countdownTimer);
+}
+
+function resetInactivity(){
+  hideInactivityBar();
+  startInactivityTimer();
+}
+
+function showInactivityBar(){
+  document.getElementById("inactivity-bar").classList.add("show");
+}
+function hideInactivityBar(){
+  document.getElementById("inactivity-bar").classList.remove("show");
+  clearInterval(countdownTimer);
+}
+
+// Reset timer on any user interaction
+["click","keydown","touchstart","scroll","mousemove"].forEach(ev => {
+  document.addEventListener(ev, () => {
+    if(isUnlocked){
+      hideInactivityBar();
+      startInactivityTimer();
+    }
+  }, { passive: true });
+});
+
+// Lock when tab becomes hidden (switched away or minimized)
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden && isUnlocked){
+    clearInactivityTimers();
+  } else if(!document.hidden && isUnlocked){
+    startInactivityTimer();
+  }
+});
+
+// ── Boot: show correct screen ─────────────────────────────────
+function bootAuth(){
+  const hasPassword = !!getStoredHash();
+  // Hide main app until authenticated
+  document.getElementById("header").style.display  = "none";
+  document.getElementById("tabbar").style.display  = "none";
+  document.getElementById("content").style.display = "none";
+
+  if(!hasPassword){
+    // First time — show setup
+    document.getElementById("lock-sub-text").textContent = "Let's set up your password first";
+    document.getElementById("lock-setup").style.display  = "block";
+    document.getElementById("lock-login").style.display  = "none";
+  } else {
+    // Returning — show login
+    showLoginForm();
+    setTimeout(() => document.getElementById("login-pw")?.focus(), 200);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
-render();
-setSyncIndicator(sbReady ? "idle" : "unconfigured");
-if(sbReady) pullFromCloud();
+bootAuth();
 </script>
 </body>
 </html>
