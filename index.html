@@ -741,7 +741,20 @@ async function sbUpsert(data){
 function loadState(){
   try{
     const raw = localStorage.getItem("lcc_state");
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const saved = JSON.parse(raw);
+      // Deep merge: saved data wins, but new keys from DEFAULTS fill any gaps
+      const merged = JSON.parse(JSON.stringify(DEFAULTS));
+      const keys = Object.keys(merged);
+      keys.forEach(k => {
+        if(saved[k] !== undefined) merged[k] = saved[k];
+      });
+      // Always preserve these scalar values from saved
+      if(saved.affIdx !== undefined) merged.affIdx = saved.affIdx;
+      if(saved.lastReset) merged.lastReset = saved.lastReset;
+      if(saved._savedAt) merged._savedAt = saved._savedAt;
+      return merged;
+    }
   }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULTS));
 }
@@ -911,7 +924,6 @@ function tag(text,color){
 // ══════════════════════════════════════════════════════════════
 // RENDER TABS
 // ══════════════════════════════════════════════════════════════
-let currentTab = "dashboard";
 
 function render(){
   checkDailyReset();
@@ -2007,8 +2019,8 @@ function handleClick(e){
       save(); render(); break;
 
     case "toggle-microtask": {
-      const gi = parseInt(el.dataset.goal), ti = parseInt(el.dataset.task);
-      S.goals[gi].microtasks[ti].done = !S.goals[gi].microtasks[ti].done;
+      const gii = parseInt(el.dataset.goal), tii = parseInt(el.dataset.task);
+      S.goals[gii].microtasks[tii].done = !S.goals[gii].microtasks[tii].done;
       save(); render(); break;
     }
     case "toggle-ritual":
@@ -2024,16 +2036,16 @@ function handleClick(e){
       save(); render(); break;
 
     case "review-rating": {
-      const week = el.dataset.week; const rating = parseInt(el.dataset.rating);
-      let r = S.weeklyReviews.find(x=>x.week===week);
-      if(!r){ r={week,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:5}; S.weeklyReviews.push(r); }
-      r.rating = rating; save(); render(); break;
+      const rWeek = el.dataset.week; const rRating = parseInt(el.dataset.rating);
+      let rr = S.weeklyReviews.find(x=>x.week===rWeek);
+      if(!rr){ rr={week:rWeek,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:5}; S.weeklyReviews.push(rr); }
+      rr.rating = rRating; save(); render(); break;
     }
     case "add-microtask": {
-      const gi = parseInt(el.dataset.idx);
+      const mgi = parseInt(el.dataset.idx);
       openModal("Add Microtask",[
         {key:"task",label:"Task",val:"",placeholder:"What's the next small step?"},
-      ], vals => { S.goals[gi].microtasks.push({task:vals.task,done:false}); }); break;
+      ], vals => { S.goals[mgi].microtasks.push({task:vals.task,done:false}); }); break;
     }
     case "add-goal":
       openModal("Add New Goal",[
@@ -2217,11 +2229,11 @@ function handleInput(e){
       save(); break;
     }
     case "review-field": {
-      const week = el.dataset.week;
-      const field = el.dataset.field;
-      let r = S.weeklyReviews.find(x=>x.week===week);
-      if(!r){ r={week,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:5}; S.weeklyReviews.push(r); }
-      r[field] = el.value;
+      const rfWeek = el.dataset.week;
+      const rfField = el.dataset.field;
+      let rfr = S.weeklyReviews.find(x=>x.week===rfWeek);
+      if(!rfr){ rfr={week:rfWeek,worked:"",didnt:"",change:"",wins:"",intentions:"",rating:0}; S.weeklyReviews.push(rfr); }
+      rfr[rfField] = el.value;
       save(); break;
     }
     case "hundred-item": {
