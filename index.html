@@ -1319,48 +1319,56 @@ function renderSavings(){
 
 // ── REVENUE ──────────────────────────────────────────────────
 function renderRevenue(){
-  const totalRev = S.revenue.reduce((a,r)=>a+r.price*r.current,0);
-  const targetRev = S.revenue.reduce((a,r)=>a+r.price*r.target,0);
+  const totalRev = S.revenue.reduce((a,r)=>a+(r.price*r.current),0);
+  const targetRev = S.revenue.reduce((a,r)=>a+(r.price*r.target),0);
   return `
   ${sectionHdr("📈","Revenue — $50K Plan","Your roadmap to financial freedom.")}
   <div class="card" style="text-align:center;border-top:3px solid ${C.gold}">
     <div class="label">Monthly Revenue</div>
     <div style="font-size:44px;font-weight:700;color:${C.gold};font-family:'Cormorant Garamond',serif">${fmtD(totalRev)}</div>
     <div style="font-size:10px;color:var(--gray-lt);margin-top:4px;margin-bottom:14px">
-      of ${fmtD(targetRev)} goal · ${((totalRev/targetRev)*100).toFixed(0)}% there
+      of ${fmtD(targetRev)} goal · ${targetRev>0?((totalRev/targetRev)*100).toFixed(0):0}% there
     </div>
     ${bar(pct(totalRev,targetRev),C.gold,14)}
   </div>
   <div class="rings-row">
-    ${S.revenue.map(r=>ring(pct(r.current,r.target),82,7,C.gold,r.icon,`${r.current}/${r.target}`)).join("")}
+    ${S.revenue.map(r=>ring(pct(r.current,r.target),82,7,C.gold,r.icon||"💰",`${r.current}/${r.target}`)).join("")}
   </div>
   ${S.revenue.map((r,i)=>{
-    const earned=r.price*r.current, target=r.price*r.target, p=pct(r.current,r.target);
+    const earned=r.price*r.current, tgt=r.price*r.target, p=pct(r.current,r.target);
     return`<div class="card" style="border-left:4px solid ${C.gold};margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-end">
-        <div>
-          <div style="font-size:14px;color:var(--gold-soft);font-weight:700">${r.icon} ${r.product}</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:15px;color:var(--gold-soft);font-weight:700">${r.icon||"💰"} ${r.product}</div>
           <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">$${fmt(r.price)}/unit · ${r.current} of ${r.target} sales</div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:20px;font-weight:700;color:${C.gold}">${fmtD(earned)}</div>
-          <div style="font-size:9px;color:var(--gray-lt)">target: ${fmtD(target)}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="text-align:right">
+            <div style="font-size:20px;font-weight:700;color:${C.gold}">${fmtD(earned)}</div>
+            <div style="font-size:9px;color:var(--gray-lt)">target: ${fmtD(tgt)}</div>
+          </div>
         </div>
       </div>
       ${bar(p,C.gold,10)}
-      <div style="display:flex;justify-content:space-between;margin-top:5px">
-        <span style="font-size:9px;color:var(--gray-lt)">${r.target-r.current} more sales needed</span>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;align-items:center">
+        <span style="font-size:9px;color:var(--gray-lt)">${r.target>r.current?r.target-r.current+" more sales needed":"🎉 Goal reached!"}</span>
         <span style="font-size:11px;font-weight:700;color:${p>=100?C.green:C.gold}">${p.toFixed(0)}%</span>
       </div>
-      <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;margin-top:8px;font-family:Montserrat,sans-serif"
-        data-action="edit-revenue" data-idx="${i}">✏️ Update sales</button>
-    </div>`;}).join("")}`;
+      <div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px">
+        <button style="flex:1;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;color:var(--gold);font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px;cursor:pointer"
+          data-action="edit-revenue" data-idx="${i}">✏️ Edit</button>
+        <button style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#EF4444;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px 12px;cursor:pointer"
+          data-action="delete-revenue" data-idx="${i}">🗑️</button>
+      </div>
+    </div>`;}).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-revenue">+ Add Income Stream</button>`;
 }
 
 // ── MARKETING ────────────────────────────────────────────────
 function renderMarketing(){
   const done = S.marketing.filter(m=>m.done).length;
   const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const platforms = ["YouTube","TikTok","Instagram","LinkedIn","Email","Skool","Twitter","Facebook","Pinterest","Podcast","Blog","Other"];
   return `
   ${sectionHdr("📣","Marketing Engine","Show up consistently. Your audience is waiting.")}
   <div class="card">
@@ -1372,18 +1380,29 @@ function renderMarketing(){
   </div>
   ${days.map(day=>{
     const posts = S.marketing.filter(m=>m.day===day);
-    if(!posts.length) return "";
     return`<div class="card" style="margin-bottom:10px">
-      <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:10px">${day}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${posts.length?"10px":"0"}">
+        <div style="font-size:12px;color:var(--gold);font-weight:700">${day}</div>
+        <button style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--gold-dk);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer"
+          data-action="add-marketing-post" data-day="${day}">+ Add</button>
+      </div>
       ${posts.map((m,i)=>{
         const gi = S.marketing.indexOf(m);
         return`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;
-          border-bottom:${i<posts.length-1?"1px solid rgba(255,255,255,.06)":"none"};cursor:pointer"
-          data-action="toggle-marketing" data-idx="${gi}">
-          ${chkBox(m.done,PLATFORM_COLOR[m.platform]||C.gold,20)}
-          <span class="tag" style="background:${PLATFORM_COLOR[m.platform]||C.gold}22;color:${PLATFORM_COLOR[m.platform]||C.gold};min-width:58px;text-align:center">${m.platform}</span>
+          border-bottom:1px solid rgba(255,255,255,.05)">
+          <div data-action="toggle-marketing" data-idx="${gi}" style="cursor:pointer;flex-shrink:0">
+            ${chkBox(m.done,PLATFORM_COLOR[m.platform]||C.gold,20)}
+          </div>
+          <span class="tag" style="background:${PLATFORM_COLOR[m.platform]||C.gold}22;color:${PLATFORM_COLOR[m.platform]||C.gold};min-width:58px;text-align:center;flex-shrink:0">${m.platform}</span>
           <span style="font-size:11px;color:${m.done?"var(--gold-dk)":"var(--gold-soft)"};flex:1;text-decoration:${m.done?"line-through":"none"}">${m.content}</span>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px"
+              data-action="edit-marketing-post" data-idx="${gi}">✏️</button>
+            <button style="background:none;border:none;color:#EF4444;font-size:12px;cursor:pointer;padding:2px"
+              data-action="delete-marketing-post" data-idx="${gi}">✕</button>
+          </div>
         </div>`;}).join("")}
+      ${!posts.length?`<div style="font-size:10px;color:var(--gray-lt);font-style:italic;padding:4px 0">No content planned — tap + Add</div>`:""}
     </div>`;}).join("")}`;
 }
 
@@ -2000,11 +2019,46 @@ function handleClick(e){
       ], vals => { Object.assign(S.savings[idx],vals); }); break;
 
     case "edit-revenue":
-      openModal("Update Revenue",[
-        {key:"current",label:"Sales This Month",val:S.revenue[idx].current,type:"number"},
-        {key:"target",label:"Monthly Target (sales)",val:S.revenue[idx].target,type:"number"},
-        {key:"price",label:"Price per Unit ($)",val:S.revenue[idx].price,type:"number"},
+      openModal("Edit Income Stream",[
+        {key:"icon",  label:"Icon (emoji)",    val:S.revenue[idx].icon||"💰",  placeholder:"💰"},
+        {key:"product",label:"Stream Name",    val:S.revenue[idx].product,     placeholder:"e.g. Kudrant Lab"},
+        {key:"price", label:"Price per Unit ($)",val:S.revenue[idx].price,   type:"number"},
+        {key:"current",label:"Sales This Month", val:S.revenue[idx].current, type:"number"},
+        {key:"target", label:"Monthly Target (sales)",val:S.revenue[idx].target,type:"number"},
       ], vals => { Object.assign(S.revenue[idx],vals); }); break;
+
+    case "add-revenue":
+      openModal("Add Income Stream",[
+        {key:"icon",   label:"Icon (emoji)",       val:"💰", placeholder:"💰"},
+        {key:"product",label:"Stream Name",        val:"",   placeholder:"e.g. Coaching, Course, Consulting"},
+        {key:"price",  label:"Price per Unit ($)", val:"",   type:"number", placeholder:"0.00"},
+        {key:"current",label:"Sales This Month",   val:"0",  type:"number"},
+        {key:"target", label:"Monthly Target (sales)",val:"10",type:"number"},
+      ], vals => { S.revenue.push({...vals, price:Number(vals.price), current:Number(vals.current), target:Number(vals.target)}); }); break;
+
+    case "delete-revenue":
+      if(confirm(`Delete "${S.revenue[idx].product}"? This cannot be undone.`)){
+        S.revenue.splice(idx,1); save(); render();
+      } break;
+
+    case "add-marketing-post":
+      openModal(`Add Post — ${el.dataset.day}`,[
+        {key:"platform",label:"Platform",type:"select",val:"YouTube",
+          options:["YouTube","TikTok","Instagram","LinkedIn","Email","Skool","Twitter","Facebook","Pinterest","Podcast","Blog","Other"].map(v=>({val:v,label:v}))},
+        {key:"content",label:"Content Description",val:"",placeholder:"What will you post?"},
+      ], vals => { S.marketing.push({day:el.dataset.day, platform:vals.platform, content:vals.content, done:false}); }); break;
+
+    case "edit-marketing-post":
+      openModal("Edit Post",[
+        {key:"platform",label:"Platform",type:"select",val:S.marketing[idx].platform,
+          options:["YouTube","TikTok","Instagram","LinkedIn","Email","Skool","Twitter","Facebook","Pinterest","Podcast","Blog","Other"].map(v=>({val:v,label:v}))},
+        {key:"day",label:"Day",type:"select",val:S.marketing[idx].day,
+          options:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(v=>({val:v,label:v}))},
+        {key:"content",label:"Content Description",val:S.marketing[idx].content},
+      ], vals => { Object.assign(S.marketing[idx],vals); }); break;
+
+    case "delete-marketing-post":
+      S.marketing.splice(idx,1); save(); render(); break;
 
     case "goto":
       switchTab(el.dataset.goto||"dashboard"); break;
