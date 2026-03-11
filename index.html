@@ -492,20 +492,8 @@ textarea{resize:vertical;min-height:70px;}
 // DEFAULT DATA
 // ══════════════════════════════════════════════════════════════
 const DEFAULTS = {
-  priorities:[
-    {id:1,task:"Record Kudrant Lab tutorial video",level:"HIGH",time:"6–7 PM",done:false},
-    {id:2,task:"Review Oracle performance tickets",level:"HIGH",time:"9–10 AM",done:false},
-    {id:3,task:"Write 2 poems — Grief of Her",level:"MEDIUM",time:"8 PM",done:false},
-  ],
-  schedule:[
-    {time:"6:00 AM",task:"Morning Meditation (MAP)",area:"Wellness",done:false},
-    {time:"8:00 AM",task:"Check Oracle alerts & logs",area:"DBA Job",done:false},
-    {time:"9:00 AM",task:"Review & prioritize tickets",area:"DBA Job",done:false},
-    {time:"12:00 PM",task:"Kudrant Lab community & content",area:"Kudrant Lab",done:false},
-    {time:"3:00 PM",task:"Accelerator student support",area:"Accelerator",done:false},
-    {time:"6:00 PM",task:"Poetry writing / marketing",area:"Poetry",done:false},
-    {time:"8:00 PM",task:"Evening review & log",area:"Personal",done:false},
-  ],
+  priorities:[],
+  schedule:[],
   wellness:[
     {icon:"💧",label:"Water (8+ glasses)",done:false},
     {icon:"🧘",label:"Meditation / MAP",done:false},
@@ -515,64 +503,15 @@ const DEFAULTS = {
     {icon:"🙏",label:"Affirmations / Prayer",done:false},
     {icon:"✨",label:"Skincare Routine",done:false},
   ],
-  personalBills:[
-    {name:"🏠 Rent / Mortgage",   category:"Housing",      amount:1450, due:"1st",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Bank Transfer", notes:""},
-    {name:"⚡ Electric / Gas",     category:"Utilities",    amount:120,  due:"15th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
-    {name:"📱 Cell Phone",         category:"Utilities",    amount:85,   due:"5th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
-    {name:"🌐 Internet",           category:"Utilities",    amount:65,   due:"10th", freq:"Monthly",  auto:false, paid:false, payMethod:"Bank Transfer", notes:""},
-    {name:"🚗 Car Payment",        category:"Transport",    amount:420,  due:"5th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
-    {name:"🏥 Health Insurance",   category:"Health",       amount:280,  due:"1st",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
-    {name:"🎬 Netflix/Streaming",  category:"Subscription", amount:22,   due:"15th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Credit Card",   notes:""},
-    {name:"🎵 Spotify",            category:"Subscription", amount:11,   due:"10th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Credit Card",   notes:""},
-    {name:"💊 Prescriptions",      category:"Health",       amount:45,   due:"20th", freq:"Monthly",  auto:false, paid:false, payMethod:"Manual",        notes:""},
-  ],
-  bizBills:[
-    {name:"Skool",        business:"Kudrant Lab",  amount:99,  due:"5th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Community platform"},
-    {name:"Kartra",       business:"Accelerator",  amount:199, due:"12th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Funnel + email"},
-    {name:"Canva Pro",    business:"Content",      amount:15,  due:"18th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Design tool"},
-    {name:"Zoom",         business:"All",          amount:15,  due:"8th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Calls & webinars"},
-    {name:"Domain/Host",  business:"Website",      amount:20,  due:"1st",  freq:"Yearly",   auto:false, paid:false, payMethod:"Business Card", notes:"Annual renewal"},
-  ],
+  personalBills:[],
+  bizBills:[],
   bills:[],
-  debts:[
-    {name:"💳 Credit Card 1",balance:3200,original:5000,rate:22.9,min:96,color:"#EF4444"},
-    {name:"💳 Credit Card 2",balance:1800,original:2500,rate:18.5,min:54,color:"#F59E0B"},
-    {name:"🚗 Car Loan",balance:12400,original:18000,rate:6.9,min:342,color:"#3B82F6"},
-    {name:"🎓 Student Loan",balance:28000,original:35000,rate:4.5,min:310,color:"#8B5CF6"},
-  ],
-  savings:[
-    {name:"🚨 Emergency Fund",target:15000,saved:4200,monthly:500,color:"#EF4444"},
-    {name:"💼 Business Investment",target:10000,saved:2800,monthly:300,color:"#C9A84C"},
-    {name:"🏆 Investments / IRA",target:12000,saved:5500,monthly:400,color:"#10B981"},
-    {name:"✈️ Travel Fund",target:3000,saved:850,monthly:150,color:"#3B82F6"},
-    {name:"🏠 Home Down Payment",target:50000,saved:8000,monthly:800,color:"#14B8A6"},
-  ],
-  revenue:[
-    {product:"Kudrant Lab",icon:"🧪",price:25,target:500,current:187},
-    {product:"Accelerator",icon:"🚀",price:3500,target:15,current:4},
-    {product:"Rescue+",icon:"🛟",price:500,target:20,current:6},
-    {product:"Poetry Books",icon:"📖",price:20,target:100,current:23},
-  ],
+  debts:[],
+  savings:[],
+  revenue:[],
   revenueMeta:{taxRate:25, targetMonthly:50000},
-  projects:[
-    {id:"P001",name:"Launch Kudrant Lab Membership",category:"Kudrant Lab",why:"Community + income stream toward $50K/mo",start:"2026-01-01",finish:"2026-04-30",priority:"HIGH",status:"In Progress",quarter:"Q2",revenueImpact:"High",notes:""},
-    {id:"P002",name:"DBA Accelerator Revamp",category:"Accelerator",why:"Increase student results & referrals",start:"2026-02-01",finish:"2026-05-15",priority:"HIGH",status:"In Progress",quarter:"Q2",revenueImpact:"High",notes:""},
-    {id:"P003",name:"Grief of Her — Poetry Book",category:"Poetry",why:"Creative expression & healing",start:"2026-01-15",finish:"2026-06-30",priority:"MEDIUM",status:"Planning",quarter:"Q2",revenueImpact:"Medium",notes:""},
-    {id:"P004",name:"Rescue+ Consulting Launch",category:"Rescue+",why:"Database consulting revenue",start:"2026-03-01",finish:"2026-05-01",priority:"HIGH",status:"Planning",quarter:"Q1",revenueImpact:"High",notes:""},
-    {id:"P005",name:"Quantum Awakening — Book 2",category:"Poetry",why:"Expand poetry brand",start:"2026-06-01",finish:"2026-10-31",priority:"LOW",status:"Not Started",quarter:"Q3",revenueImpact:"Medium",notes:""},
-  ],
-  projectTasks:[
-    {projectId:"P001",mainTask:"Build Sales Page",subtask:"Write headline & hook",due:"2026-03-20",priority:"HIGH",status:"Completed",estHours:1,actHours:1,notes:""},
-    {projectId:"P001",mainTask:"Build Sales Page",subtask:"Add testimonials section",due:"2026-03-22",priority:"HIGH",status:"In Progress",estHours:2,actHours:0,notes:""},
-    {projectId:"P001",mainTask:"Build Sales Page",subtask:"Add pricing & checkout",due:"2026-03-25",priority:"HIGH",status:"Not Started",estHours:3,actHours:0,notes:""},
-    {projectId:"P001",mainTask:"Upload Training Videos",subtask:"Record Module 1",due:"2026-03-28",priority:"HIGH",status:"Not Started",estHours:4,actHours:0,notes:""},
-    {projectId:"P001",mainTask:"Upload Training Videos",subtask:"Edit & upload to platform",due:"2026-04-01",priority:"MEDIUM",status:"Not Started",estHours:2,actHours:0,notes:""},
-    {projectId:"P002",mainTask:"Revamp Curriculum",subtask:"Outline new lesson structure",due:"2026-03-30",priority:"HIGH",status:"In Progress",estHours:3,actHours:1,notes:""},
-    {projectId:"P003",mainTask:"Finish Manuscript",subtask:"Edit poems 1–10",due:"2026-04-15",priority:"MEDIUM",status:"Not Started",estHours:5,actHours:0,notes:""},
-    {projectId:"P003",mainTask:"Finish Manuscript",subtask:"Write reflections/prompts",due:"2026-04-30",priority:"MEDIUM",status:"Not Started",estHours:4,actHours:0,notes:""},
-    {projectId:"P004",mainTask:"Create Offer",subtask:"Define service packages",due:"2026-03-15",priority:"HIGH",status:"Completed",estHours:2,actHours:2,notes:""},
-    {projectId:"P004",mainTask:"Create Offer",subtask:"Build proposal template",due:"2026-03-20",priority:"HIGH",status:"In Progress",estHours:2,actHours:0,notes:""},
-  ],
+  projects:[],
+  projectTasks:[],
   meditation:[
     {day:"Monday",intention:"$50K monthly income flowing to me",done:false,feeling:""},
     {day:"Tuesday",intention:"Confidence as a leader and teacher",done:false,feeling:""},
@@ -591,28 +530,8 @@ const DEFAULTS = {
     {day:"Saturday",breakfast:"",lunch:"",dinner:"",snack:""},
     {day:"Sunday",breakfast:"",lunch:"",dinner:"",snack:""},
   ],
-  marketing:[
-    {day:"Mon",platform:"YouTube",content:"DBA troubleshooting tutorial",done:false},
-    {day:"Mon",platform:"TikTok",content:"60-sec Oracle tip reel",done:false},
-    {day:"Tue",platform:"Instagram",content:"5 Oracle commands carousel",done:false},
-    {day:"Wed",platform:"Email",content:"Student success story newsletter",done:false},
-    {day:"Wed",platform:"Skool",content:"New lab release announcement",done:false},
-    {day:"Thu",platform:"LinkedIn",content:"How DBAs earn six figures article",done:false},
-    {day:"Fri",platform:"TikTok",content:"Day in the life of a DBA",done:false},
-    {day:"Sat",platform:"Instagram",content:"Poetry / motivational quote",done:false},
-    {day:"Sun",platform:"Email",content:"Weekly DBA tips digest",done:false},
-  ],
-  appointments:[
-    {type:"🩺 Primary Care",provider:"",date:"",time:"",notes:"Annual physical",done:false},
-    {type:"🦷 Dental Cleaning",provider:"",date:"",time:"",notes:"Cleaning & X-rays",done:false},
-    {type:"🧠 Therapy",provider:"",date:"",time:"",notes:"Weekly session",done:false},
-    {type:"👁 Eye Exam",provider:"",date:"",time:"",notes:"Annual vision check",done:false},
-    {type:"💅 Manicure",provider:"",date:"",time:"",notes:"Gel refill",done:false},
-    {type:"🦶 Pedicure",provider:"",date:"",time:"",notes:"Seasonal color",done:false},
-    {type:"✂️ Hair",provider:"",date:"",time:"",notes:"Trim + style",done:false},
-    {type:"💆 Spa / Massage",provider:"",date:"",time:"",notes:"Monthly treat",done:false},
-    {type:"🧖 Facial",provider:"",date:"",time:"",notes:"Deep cleanse",done:false},
-  ],
+  marketing:[],
+  appointments:[],
   affirmations:[
     "I lead one of the most powerful Oracle DBA communities online.",
     "My work transforms careers and creates six-figure DBAs.",
@@ -646,85 +565,16 @@ const DEFAULTS = {
     mantra:"",
   },
   weeklyReviews:[],
-  bucketList:[
-    {item:"Publish my first poetry book",category:"Creativity",done:false,year:"2026"},
-    {item:"Hit $50K in a single month",category:"Wealth",done:false,year:"2026"},
-    {item:"Travel to a country I've never been",category:"Travel",done:false,year:"2026"},
-    {item:"Build Kudrant Lab to 1,000 members",category:"Business",done:false,year:"2026"},
-    {item:"Take Sage on a special trip",category:"Family",done:false,year:"2026"},
-  ],
-  hundredThings:[
-    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
-    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
-    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
-    {item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},{item:"",done:false},
-  ],
-  goals:[
-    {title:"Hit $50K Monthly Revenue",area:"Wealth",deadline:"2026-12-31",why:"Financial freedom for my family",microtasks:[
-      {task:"Launch Kudrant Lab membership campaign",done:false},
-      {task:"Enroll 15 Accelerator students",done:false},
-      {task:"Close 20 Rescue+ clients",done:false},
-      {task:"Publish and market poetry book",done:false},
-    ]},
-    {title:"Publish Quantum Awakening",area:"Creativity",deadline:"2026-06-30",why:"Share my healing through poetry",microtasks:[
-      {task:"Finalize all poems",done:false},
-      {task:"Design book cover",done:false},
-      {task:"Submit to publisher / self-publish",done:false},
-      {task:"Launch marketing campaign",done:false},
-    ]},
-    {title:"Grow Kudrant Lab to 500 members",area:"Business",deadline:"2026-09-30",why:"Build the #1 Oracle DBA community",microtasks:[
-      {task:"Post 3x/week content",done:false},
-      {task:"Launch referral program",done:false},
-      {task:"Create onboarding sequence",done:false},
-    ]},
-  ],
-  readingList:[
-    {title:"The Big Leap",author:"Gay Hendricks",category:"Mindset",status:"Reading",rating:0,notes:""},
-    {title:"Atomic Habits",author:"James Clear",category:"Productivity",status:"Want to Read",rating:0,notes:""},
-    {title:"You Are a Badass at Making Money",author:"Jen Sincero",category:"Wealth",status:"Want to Read",rating:0,notes:""},
-    {title:"The Four Agreements",author:"Don Miguel Ruiz",category:"Spiritual",status:"Read",rating:5,notes:"Life changing"},
-  ],
-  rituals:[
-    {name:"Morning MAP Meditation",time:"6:00 AM",days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],active:true,notes:"Set intention, visualize, feel it"},
-    {name:"Evening Gratitude & Review",time:"9:00 PM",days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],active:true,notes:"3 wins, 1 lesson, tomorrow's focus"},
-    {name:"Weekly Business Review",time:"Sunday 7 PM",days:["Sun"],active:true,notes:"Revenue, content, goals check"},
-    {name:"Skincare & Self Care",time:"7:00 PM",days:["Mon","Wed","Fri","Sat","Sun"],active:true,notes:"AM + PM routine"},
-    {name:"Movement / Workout",time:"5:30 AM",days:["Mon","Tue","Wed","Thu","Fri"],active:true,notes:""},
-  ],
-  celebrations:[
-    "I built a full life command center app from scratch",
-    "I show up for Sage every single week",
-    "I built multiple income streams while working full-time",
-    "I write poetry that heals",
-    "I am brave enough to pursue my dreams",
-  ],
-  boundaries:[
-    {boundary:"I do not work on my business after 10 PM",area:"Work/Life",active:true},
-    {boundary:"I protect my morning meditation time",area:"Spiritual",active:true},
-    {boundary:"I do not accept low-paying clients who drain my energy",area:"Business",active:true},
-    {boundary:"I limit social media to scheduled content time",area:"Mental Health",active:true},
-    {boundary:"I say no to anything that doesn't align with my goals",area:"Personal",active:true},
-  ],
-  parenting:[
-    {task:"Weekly call with Sage",frequency:"Weekly",done:false,notes:""},
-    {task:"Send a care package",frequency:"Monthly",done:false,notes:""},
-    {task:"Plan a special trip together",frequency:"Quarterly",done:false,notes:""},
-    {task:"Write a letter to Sage",frequency:"Monthly",done:false,notes:"Share wisdom and love"},
-    {task:"Celebrate Sage's wins",frequency:"Ongoing",done:false,notes:""},
-  ],
-  education:[
-    {course:"Oracle Database 19c Advanced",platform:"Oracle University",status:"In Progress",progress:45,notes:""},
-    {course:"YouTube Growth Masterclass",platform:"Online",status:"Want to Start",progress:0,notes:""},
-    {course:"Poetry Writing Workshop",platform:"Skillshare",status:"Want to Start",progress:0,notes:""},
-    {course:"Business Finance Basics",platform:"Coursera",status:"Want to Start",progress:0,notes:""},
-  ],
-  resources:[
-    {name:"Kudrant Lab Community",type:"Community",url:"",notes:"My own DBA community"},
-    {name:"Oracle Documentation",type:"Reference",url:"https://docs.oracle.com",notes:""},
-    {name:"Canva",type:"Tool",url:"https://canva.com",notes:"Design & content creation"},
-    {name:"Skool",type:"Platform",url:"https://skool.com",notes:"Community platform"},
-    {name:"ConvertKit",type:"Tool",url:"https://convertkit.com",notes:"Email marketing"},
-  ],
+  bucketList:[],
+  hundredThings:[],
+  goals:[],
+  readingList:[],
+  rituals:[],
+  celebrations:[],
+  boundaries:[],
+  parenting:[],
+  education:[],
+  resources:[],
   affIdx:0,
   lastReset:"",
 };
@@ -795,14 +645,14 @@ async function pullFromCloud(){
     setSyncIndicator("syncing");
     const cloudData = await sbGet();
     if(cloudData){
-      // Use cloud if it's newer
       const cloudTime = cloudData._savedAt || 0;
       const localTime = S._savedAt || 0;
-      if(cloudTime > localTime){
+      // Always use cloud if: cloud is newer, OR local has no savedAt (fresh deploy / cleared browser)
+      if(cloudTime > localTime || !S._savedAt){
         S = cloudData;
         localStorage.setItem("lcc_state", JSON.stringify(S));
         render();
-        showSyncToast("☁️ Synced from cloud — you're up to date!");
+        showSyncToast("☁️ Your data loaded from cloud!");
       }
     }
     setSyncIndicator("idle");
@@ -3793,9 +3643,25 @@ function unlockApp(){
   document.getElementById("tabbar").style.display = "";
   document.getElementById("content").style.display = "";
   startInactivityTimer();
-  render();
-  setSyncIndicator(sbReady ? "idle" : "unconfigured");
-  if(sbReady) pullFromCloud();
+  setSyncIndicator(sbReady ? "syncing" : "unconfigured");
+
+  if(sbReady && !S._savedAt){
+    // Fresh deploy or cleared browser — show loading screen while cloud fetches
+    document.getElementById("content").innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        min-height:60vh;gap:16px;text-align:center;padding:40px">
+        <div style="font-size:36px">☁️</div>
+        <div style="font-size:16px;font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif">
+          Loading your data...</div>
+        <div style="font-size:11px;color:var(--gold-dk)">Syncing from cloud — just a moment</div>
+        <div style="width:48px;height:48px;border:3px solid rgba(201,168,76,.2);border-top:3px solid var(--gold);
+          border-radius:50%;animation:spin 1s linear infinite"></div>
+      </div>`;
+    pullFromCloud().then(()=>{ if(!S._savedAt) render(); });
+  } else {
+    render();
+    if(sbReady) pullFromCloud();
+  }
 }
 
 // ── Lock ──────────────────────────────────────────────────────
