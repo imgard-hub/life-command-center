@@ -546,6 +546,7 @@ const DEFAULTS = {
     {product:"Rescue+",icon:"🛟",price:500,target:20,current:6},
     {product:"Poetry Books",icon:"📖",price:20,target:100,current:23},
   ],
+  revenueMeta:{taxRate:25, targetMonthly:50000},
   meditation:[
     {day:"Monday",intention:"$50K monthly income flowing to me",done:false,feeling:""},
     {day:"Tuesday",intention:"Confidence as a leader and teacher",done:false,feeling:""},
@@ -979,7 +980,7 @@ function renderDashboard(){
             <div style="font-size:9px;color:var(--gray-lt);margin-top:1px">⏰ ${p.time}</div>
           </div>
         </div>`).join("")}
-      <button class="btn btn-outline btn-block" data-goto="priorities">Manage →</button>
+      <button class="btn btn-outline btn-block" data-action="goto" data-goto="priorities">Manage →</button>
     </div>
 
     <div class="card">
@@ -1103,6 +1104,7 @@ function renderPriorities(){
 // ── SCHEDULE ─────────────────────────────────────────────────
 function renderSchedule(){
   const done = S.schedule.filter(s=>s.done).length;
+  const areas = ["Wellness","DBA Job","Kudrant Lab","Accelerator","Poetry","Personal"];
   return `
   ${sectionHdr("🕐","Daily Schedule","Your day structured like a well-tuned database.")}
   <div class="card">
@@ -1113,18 +1115,25 @@ function renderSchedule(){
     ${bar(pct(done,S.schedule.length),C.gold,10)}
   </div>
   ${S.schedule.map((s,i)=>`
-    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:13px 16px;
+    <div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;
       border-left:4px solid ${AREA_COLOR[s.area]||C.gold};
-      background:${s.done?`${AREA_COLOR[s.area]||C.gold}0D`:"rgba(255,255,255,.03)"};margin-bottom:8px"
-      data-action="toggle-schedule" data-idx="${i}">
-      <div style="font-size:12px;color:var(--gold-dk);font-weight:600;min-width:62px">${s.time}</div>
-      <div style="width:9px;height:9px;border-radius:50%;background:${AREA_COLOR[s.area]||C.gold};flex-shrink:0"></div>
-      <div style="flex:1">
-        <div style="font-size:12px;color:${s.done?"var(--gold-dk)":"var(--gold-soft)"};text-decoration:${s.done?"line-through":"none"}">${s.task}</div>
-        <div style="margin-top:2px">${tag(s.area,AREA_COLOR[s.area]||C.gold)}</div>
+      background:${s.done?`${AREA_COLOR[s.area]||C.gold}0D`:"rgba(255,255,255,.03)"};margin-bottom:6px">
+      <div data-action="toggle-schedule" data-idx="${i}" style="cursor:pointer;flex-shrink:0">
+        ${chkBox(s.done,AREA_COLOR[s.area]||C.gold)}
       </div>
-      ${chkBox(s.done,AREA_COLOR[s.area]||C.gold)}
-    </div>`).join("")}`;
+      <div style="font-size:11px;color:var(--gold-dk);font-weight:600;min-width:58px">${s.time}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:${s.done?"var(--gold-dk)":"var(--gold-soft)"};text-decoration:${s.done?"line-through":"none"};margin-bottom:2px">${s.task}</div>
+        <div>${tag(s.area,AREA_COLOR[s.area]||C.gold)}</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:2px"
+          data-action="edit-schedule" data-idx="${i}">✏️</button>
+        <button style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;padding:2px"
+          data-action="delete-schedule" data-idx="${i}">✕</button>
+      </div>
+    </div>`).join("")}
+  <button class="btn btn-outline btn-block" style="margin-top:8px" data-action="add-schedule">+ Add Time Block</button>`;
 }
 
 // ── WELLNESS ─────────────────────────────────────────────────
@@ -1133,20 +1142,24 @@ function renderWellness(){
   return `
   ${sectionHdr("🌿","Health & Wellness","A strong body powers a powerful life.")}
   <div style="display:flex;justify-content:center;padding:10px 0 20px">
-    ${ring(pct(done,7),130,12,C.green,"Habits Today",`${done} of 7 done`)}
+    ${ring(pct(done,S.wellness.length),130,12,C.green,"Habits Today",`${done} of ${S.wellness.length} done`)}
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
     ${S.wellness.map((w,i)=>`
       <div style="background:${w.done?"rgba(16,185,129,.1)":"rgba(255,255,255,.04)"};
         border:1px solid ${w.done?"rgba(16,185,129,.4)":"rgba(201,168,76,.2)"};
-        border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;
-        cursor:pointer;transition:all .2s" data-action="toggle-wellness" data-idx="${i}">
-        <span style="font-size:22px">${w.icon}</span>
-        <span style="flex:1;font-size:11px;color:${w.done?C.green:"var(--gold-soft)"};
-          font-weight:${w.done?600:400};text-decoration:${w.done?"line-through":"none"}">${w.label}</span>
-        ${chkBox(w.done,C.green)}
+        border-radius:12px;padding:12px;display:flex;align-items:center;gap:8px;transition:all .2s;position:relative">
+        <div data-action="toggle-wellness" data-idx="${i}" style="cursor:pointer;display:flex;align-items:center;gap:8px;flex:1">
+          <span style="font-size:20px">${w.icon}</span>
+          <span style="flex:1;font-size:11px;color:${w.done?C.green:"var(--gold-soft)"};
+            font-weight:${w.done?600:400};text-decoration:${w.done?"line-through":"none"}">${w.label}</span>
+          ${chkBox(w.done,C.green,18)}
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px;flex-shrink:0"
+          data-action="edit-wellness" data-idx="${i}">✏️</button>
       </div>`).join("")}
-  </div>`;
+  </div>
+  <button class="btn btn-outline btn-block" data-action="add-wellness">+ Add Wellness Habit</button>`;
 }
 
 // ── MEDITATION ───────────────────────────────────────────────
@@ -1155,18 +1168,21 @@ function renderMeditation(){
   return `
   ${sectionHdr("🧘","Meditation (MAP)","Mind, body, and vision aligned — every single day.")}
   <div style="display:flex;justify-content:center;padding:8px 0 18px">
-    ${ring(pct(done,7),110,10,C.teal,"This Week",`${done}/7 days`)}
+    ${ring(pct(done,S.meditation.length),110,10,C.teal,"This Week",`${done}/${S.meditation.length} days`)}
   </div>
   ${S.meditation.map((m,i)=>`
     <div class="card" style="border-left:4px solid ${m.done?C.teal:"rgba(201,168,76,.2)"};
       background:${m.done?"rgba(20,184,166,.07)":"rgba(255,255,255,.03)"};margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="flex:1">
-          <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px">${m.day}</div>
-          <div style="font-size:13px;color:var(--gold-soft);font-style:italic;font-family:'Cormorant Garamond',serif;line-height:1.5;margin-bottom:8px">
-            "${m.intention}"</div>
-          <input placeholder="How did you feel after? (tap to add note)"
-            value="${m.feeling||""}"
+          <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:6px">${m.day}</div>
+          <div class="label" style="margin-bottom:4px">INTENTION / TOPIC</div>
+          <input value="${(m.intention||"").replace(/"/g,"&quot;")}"
+            placeholder="Set your meditation intention for ${m.day}..."
+            style="font-size:12px;font-style:italic;margin-bottom:8px;font-family:'Cormorant Garamond',serif"
+            data-action="med-intention" data-idx="${i}"/>
+          <div class="label" style="margin-bottom:4px">HOW DID YOU FEEL AFTER?</div>
+          <input placeholder="Tap to add a note..." value="${(m.feeling||"").replace(/"/g,"&quot;")}"
             style="font-size:11px;padding:7px 10px"
             data-action="med-feeling" data-idx="${i}"/>
         </div>
@@ -1236,53 +1252,59 @@ function renderBills(){
 
 // ── DEBT ─────────────────────────────────────────────────────
 function renderDebt(){
-  const totalDebt = S.debts.reduce((a,d)=>a+d.balance,0);
-  const totalPaid = S.debts.reduce((a,d)=>a+(d.original-d.balance),0);
+  const totalDebt = S.debts.reduce((a,d)=>a+Number(d.balance),0);
+  const totalPaid = S.debts.reduce((a,d)=>a+(Number(d.original)-Number(d.balance)),0);
+  const worstDebt = [...S.debts].sort((a,b)=>Number(b.rate)-Number(a.rate))[0];
   return `
   ${sectionHdr("📉","Debt Freedom Tracker","Watch every balance drop. One payment at a time.")}
   <div class="card" style="text-align:center;border-top:3px solid ${C.red}">
     <div class="label">Total Debt Remaining</div>
     <div style="font-size:40px;font-weight:700;color:${C.red};font-family:'Cormorant Garamond',serif">${fmtD(totalDebt)}</div>
-    <div style="font-size:10px;color:var(--gray-lt);margin-top:4px">Paid off: ${fmtD(totalPaid)} · Original: ${fmtD(S.debts.reduce((a,d)=>a+d.original,0))}</div>
+    <div style="font-size:10px;color:var(--gray-lt);margin-top:4px">Paid off: ${fmtD(totalPaid)} · Original: ${fmtD(S.debts.reduce((a,d)=>a+Number(d.original),0))}</div>
   </div>
   <div class="rings-row">
-    ${S.debts.map(d=>ring(pct(d.original-d.balance,d.original),82,7,d.color,d.name.split(" ").slice(1,3).join(" "),"$"+(d.balance/1000).toFixed(1)+"K left")).join("")}
+    ${S.debts.map(d=>ring(pct(Number(d.original)-Number(d.balance),Number(d.original)),82,7,d.color||C.red,d.name.split(" ").slice(1,3).join(" "),"$"+(Number(d.balance)/1000).toFixed(1)+"K left")).join("")}
   </div>
   ${S.debts.map((d,i)=>{
-    const p=pct(d.original-d.balance,d.original);
-    return`<div class="card" style="border-left:4px solid ${d.color};margin-bottom:10px">
+    const p=pct(Number(d.original)-Number(d.balance),Number(d.original));
+    return`<div class="card" style="border-left:4px solid ${d.color||C.red};margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-end">
-        <div>
+        <div style="flex:1">
           <div style="font-size:14px;color:var(--gold-soft);font-weight:700">${d.name}</div>
           <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">${d.rate}% APR · Min: $${d.min}/mo</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:20px;font-weight:700;color:${d.color}">${fmtD(d.balance)}</div>
+          <div style="font-size:20px;font-weight:700;color:${d.color||C.red}">${fmtD(d.balance)}</div>
           <div style="font-size:9px;color:${C.green}">${p.toFixed(0)}% paid off</div>
         </div>
       </div>
-      ${bar(p,d.color,10)}
+      ${bar(p,d.color||C.red,10)}
       <div style="display:flex;justify-content:space-between;margin-top:5px">
         <span style="font-size:9px;color:var(--gray-lt)">Started: ${fmtD(d.original)}</span>
-        <span style="font-size:9px;color:${C.green}">Paid: ${fmtD(d.original-d.balance)}</span>
+        <span style="font-size:9px;color:${C.green}">Paid: ${fmtD(Number(d.original)-Number(d.balance))}</span>
       </div>
-      <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;margin-top:8px;font-family:Montserrat,sans-serif"
-        data-action="edit-debt" data-idx="${i}">✏️ Update balance</button>
+      <div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px">
+        <button style="flex:1;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;color:var(--gold);font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px;cursor:pointer"
+          data-action="edit-debt" data-idx="${i}">✏️ Edit</button>
+        <button style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#EF4444;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px 12px;cursor:pointer"
+          data-action="delete-debt" data-idx="${i}">🗑️</button>
+      </div>
     </div>`;}).join("")}
-  <div class="card" style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3)">
+  <button class="btn btn-outline btn-block" data-action="add-debt" style="margin-bottom:14px">+ Add Debt</button>
+  ${worstDebt?`<div class="card" style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3)">
     <div style="font-size:12px;color:${C.purple};font-weight:700;margin-bottom:6px">💡 Avalanche Strategy</div>
     <div style="font-size:11px;color:var(--gold-soft);line-height:1.7">
       Pay minimums on all debts, then throw every extra dollar at your 
       <strong style="color:${C.red}">highest interest debt first</strong>. 
-      That's <strong style="color:${C.red}">Credit Card 1 at 22.9% APR</strong>. Every extra $100/month saves hundreds in interest.
+      That's <strong style="color:${C.red}">${worstDebt.name} at ${worstDebt.rate}% APR</strong>. Every extra $100/month saves you hundreds in interest.
     </div>
-  </div>`;
+  </div>`:""}`;
 }
 
 // ── SAVINGS ──────────────────────────────────────────────────
 function renderSavings(){
-  const totalSaved = S.savings.reduce((a,s)=>a+s.saved,0);
-  const totalTarget = S.savings.reduce((a,s)=>a+s.target,0);
+  const totalSaved = S.savings.reduce((a,s)=>a+Number(s.saved),0);
+  const totalTarget = S.savings.reduce((a,s)=>a+Number(s.target),0);
   return `
   ${sectionHdr("💰","Savings Tracker","Every dollar saved is a step toward freedom.")}
   <div class="card" style="text-align:center;border-top:3px solid ${C.green}">
@@ -1291,67 +1313,90 @@ function renderSavings(){
     <div style="font-size:10px;color:var(--gray-lt);margin-top:4px">of ${fmtD(totalTarget)} in total goals</div>
   </div>
   <div class="rings-row">
-    ${S.savings.map(s=>ring(pct(s.saved,s.target),88,8,s.color,s.name.split(" ").slice(1,2).join(""),"$"+(s.saved/1000).toFixed(1)+"K")).join("")}
+    ${S.savings.map(s=>ring(pct(Number(s.saved),Number(s.target)),88,8,s.color||C.green,s.name.split(" ").slice(1,2).join(""),"$"+(Number(s.saved)/1000).toFixed(1)+"K")).join("")}
   </div>
   ${S.savings.map((s,i)=>{
-    const p=pct(s.saved,s.target);
-    const mo=s.monthly>0?Math.ceil((s.target-s.saved)/s.monthly)+"mo":"—";
-    return`<div class="card" style="border-left:4px solid ${s.color};margin-bottom:10px">
+    const p=pct(Number(s.saved),Number(s.target));
+    const mo=Number(s.monthly)>0?Math.ceil((Number(s.target)-Number(s.saved))/Number(s.monthly))+"mo":"—";
+    return`<div class="card" style="border-left:4px solid ${s.color||C.green};margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-end">
-        <div>
+        <div style="flex:1">
           <div style="font-size:14px;color:var(--gold-soft);font-weight:700">${s.name}</div>
           <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">$${s.monthly}/mo · ~${mo} to goal</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:20px;font-weight:700;color:${s.color}">${fmtD(s.saved)}</div>
+          <div style="font-size:20px;font-weight:700;color:${s.color||C.green}">${fmtD(s.saved)}</div>
           <div style="font-size:9px;color:var(--gray-lt)">of ${fmtD(s.target)}</div>
         </div>
       </div>
-      ${bar(p,s.color,12)}
+      ${bar(p,s.color||C.green,12)}
       <div style="display:flex;justify-content:space-between;margin-top:5px">
-        <span style="font-size:9px;color:var(--gray-lt)">${fmtD(s.target-s.saved)} remaining</span>
-        <span style="font-size:11px;font-weight:700;color:${s.color}">${p.toFixed(0)}%</span>
+        <span style="font-size:9px;color:var(--gray-lt)">${fmtD(Number(s.target)-Number(s.saved))} remaining</span>
+        <span style="font-size:11px;font-weight:700;color:${s.color||C.green}">${p.toFixed(0)}%</span>
       </div>
-      <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;margin-top:8px;font-family:Montserrat,sans-serif"
-        data-action="edit-saving" data-idx="${i}">✏️ Update balance</button>
-    </div>`;}).join("")}`;
+      <div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px">
+        <button style="flex:1;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;color:var(--gold);font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px;cursor:pointer"
+          data-action="edit-saving" data-idx="${i}">✏️ Edit</button>
+        <button style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#EF4444;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px 12px;cursor:pointer"
+          data-action="delete-saving" data-idx="${i}">🗑️</button>
+      </div>
+    </div>`;}).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-saving">+ Add Savings Goal</button>`;
 }
 
 // ── REVENUE ──────────────────────────────────────────────────
 function renderRevenue(){
-  const totalRev = S.revenue.reduce((a,r)=>a+(r.price*r.current),0);
-  const targetRev = S.revenue.reduce((a,r)=>a+(r.price*r.target),0);
+  const meta = S.revenueMeta || {taxRate:25, targetMonthly:50000};
+  const gross = S.revenue.reduce((a,r)=>a+(Number(r.price)*Number(r.current)),0);
+  const afterTax = gross * (1 - (Number(meta.taxRate)||25)/100);
+  const targetRev = S.revenue.reduce((a,r)=>a+(Number(r.price)*Number(r.target)),0);
+  const targetMonthly = Number(meta.targetMonthly)||50000;
   return `
   ${sectionHdr("📈","Revenue — $50K Plan","Your roadmap to financial freedom.")}
-  <div class="card" style="text-align:center;border-top:3px solid ${C.gold}">
-    <div class="label">Monthly Revenue</div>
-    <div style="font-size:44px;font-weight:700;color:${C.gold};font-family:'Cormorant Garamond',serif">${fmtD(totalRev)}</div>
-    <div style="font-size:10px;color:var(--gray-lt);margin-top:4px;margin-bottom:14px">
-      of ${fmtD(targetRev)} goal · ${targetRev>0?((totalRev/targetRev)*100).toFixed(0):0}% there
+
+  <!-- Revenue Summary Cards -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div class="card" style="text-align:center;border-top:3px solid ${C.gold};padding:16px 12px">
+      <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">GROSS REVENUE</div>
+      <div style="font-size:32px;font-weight:700;color:${C.gold};font-family:'Cormorant Garamond',serif">${fmtD(gross)}</div>
+      <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">this month</div>
     </div>
-    ${bar(pct(totalRev,targetRev),C.gold,14)}
+    <div class="card" style="text-align:center;border-top:3px solid ${C.green};padding:16px 12px">
+      <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">AFTER TAXES (~${meta.taxRate}%)</div>
+      <div style="font-size:32px;font-weight:700;color:${C.green};font-family:'Cormorant Garamond',serif">${fmtD(Math.round(afterTax))}</div>
+      <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">take-home est.</div>
+    </div>
   </div>
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--gold);font-weight:700">TARGET: ${fmtD(targetMonthly)}/mo</div>
+      <div style="font-size:11px;color:${gross>=targetMonthly?C.green:C.gold};font-weight:700">${targetMonthly>0?((gross/targetMonthly)*100).toFixed(0):0}% there</div>
+    </div>
+    ${bar(pct(gross,targetMonthly),gross>=targetMonthly?C.green:C.gold,12)}
+    <button style="background:none;border:none;color:var(--gold-dk);font-size:11px;cursor:pointer;margin-top:8px;font-family:Montserrat,sans-serif;font-weight:600"
+      data-action="edit-revenue-meta">⚙️ Edit tax rate & target</button>
+  </div>
+
   <div class="rings-row">
     ${S.revenue.map(r=>ring(pct(r.current,r.target),82,7,C.gold,r.icon||"💰",`${r.current}/${r.target}`)).join("")}
   </div>
+
   ${S.revenue.map((r,i)=>{
-    const earned=r.price*r.current, tgt=r.price*r.target, p=pct(r.current,r.target);
+    const earned=Number(r.price)*Number(r.current), tgt=Number(r.price)*Number(r.target), p=pct(r.current,r.target);
     return`<div class="card" style="border-left:4px solid ${C.gold};margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-start">
         <div style="flex:1">
           <div style="font-size:15px;color:var(--gold-soft);font-weight:700">${r.icon||"💰"} ${r.product}</div>
           <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">$${fmt(r.price)}/unit · ${r.current} of ${r.target} sales</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div style="text-align:right">
-            <div style="font-size:20px;font-weight:700;color:${C.gold}">${fmtD(earned)}</div>
-            <div style="font-size:9px;color:var(--gray-lt)">target: ${fmtD(tgt)}</div>
-          </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:700;color:${C.gold}">${fmtD(earned)}</div>
+          <div style="font-size:9px;color:var(--gray-lt)">target: ${fmtD(tgt)}</div>
         </div>
       </div>
       ${bar(p,C.gold,10)}
       <div style="display:flex;justify-content:space-between;margin-top:5px;align-items:center">
-        <span style="font-size:9px;color:var(--gray-lt)">${r.target>r.current?r.target-r.current+" more sales needed":"🎉 Goal reached!"}</span>
+        <span style="font-size:9px;color:var(--gray-lt)">${Number(r.target)>Number(r.current)?Number(r.target)-Number(r.current)+" more sales needed":"🎉 Goal reached!"}</span>
         <span style="font-size:11px;font-weight:700;color:${p>=100?C.green:C.gold}">${p.toFixed(0)}%</span>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px">
@@ -1419,30 +1464,40 @@ function renderAppointments(){
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:7px">
             <div>
               <div class="label">Provider</div>
-              <input value="${a.provider||""}" placeholder="Name" style="font-size:10px;padding:6px 8px"
+              <input value="${(a.provider||"").replace(/"/g,"&quot;")}" placeholder="Name" style="font-size:10px;padding:6px 8px"
                 data-action="appt-field" data-idx="${i}" data-field="provider"/>
             </div>
             <div>
               <div class="label">Date</div>
-              <input value="${a.date||""}" placeholder="MM/DD" style="font-size:10px;padding:6px 8px"
+              <input value="${(a.date||"").replace(/"/g,"&quot;")}" placeholder="MM/DD" style="font-size:10px;padding:6px 8px"
                 data-action="appt-field" data-idx="${i}" data-field="date"/>
             </div>
             <div>
               <div class="label">Time</div>
-              <input value="${a.time||""}" placeholder="2:00 PM" style="font-size:10px;padding:6px 8px"
+              <input value="${(a.time||"").replace(/"/g,"&quot;")}" placeholder="2:00 PM" style="font-size:10px;padding:6px 8px"
                 data-action="appt-field" data-idx="${i}" data-field="time"/>
             </div>
           </div>
-          <div style="font-size:10px;color:var(--gray-lt)">${a.notes||""}</div>
+          <div class="label" style="margin-bottom:3px">Notes</div>
+          <input value="${(a.notes||"").replace(/"/g,"&quot;")}" placeholder="Add notes..."
+            style="font-size:10px;padding:6px 8px"
+            data-action="appt-field" data-idx="${i}" data-field="notes"/>
         </div>
-        <div data-action="toggle-appt" data-idx="${i}"
-          style="width:28px;height:28px;border-radius:50%;border:2px solid ${a.done?C.green:"rgba(201,168,76,.35)"};
-          background:${a.done?C.green:"transparent"};display:flex;align-items:center;justify-content:center;
-          cursor:pointer;font-size:13px;color:white;font-weight:700;flex-shrink:0;transition:all .2s">
-          ${a.done?"✓":""}
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0">
+          <div data-action="toggle-appt" data-idx="${i}"
+            style="width:28px;height:28px;border-radius:50%;border:2px solid ${a.done?C.green:"rgba(201,168,76,.35)"};
+            background:${a.done?C.green:"transparent"};display:flex;align-items:center;justify-content:center;
+            cursor:pointer;font-size:13px;color:white;font-weight:700;transition:all .2s">
+            ${a.done?"✓":""}
+          </div>
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:2px"
+            data-action="edit-appt" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;padding:2px"
+            data-action="delete-appt" data-idx="${i}">🗑️</button>
         </div>
       </div>
-    </div>`).join("")}`;
+    </div>`).join("")}
+  <button class="btn btn-outline btn-block" data-action="add-appt" style="margin-top:6px">+ Add Appointment</button>`;
 }
 
 // ── AFFIRMATIONS ─────────────────────────────────────────────
@@ -1459,32 +1514,58 @@ function renderAffirmations(){
     </div>
     <div style="margin-top:12px;font-size:9px;color:var(--gold-dk)">${idx+1} of ${S.affirmations.length}</div>
   </div>
-  <div class="card">
-    <div class="card-title">All Declarations</div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin:0">All Declarations</div>
+      <button style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:6px 12px;cursor:pointer"
+        data-action="add-affirmation">+ Add</button>
+    </div>
     ${S.affirmations.map((a,i)=>`
-      <div data-action="set-aff" data-idx="${i}" style="padding:10px 12px;border-radius:8px;margin-bottom:5px;
+      <div style="padding:10px 12px;border-radius:8px;margin-bottom:5px;
         background:${i===idx?"rgba(201,168,76,.12)":"rgba(255,255,255,.02)"};
         border:1px solid ${i===idx?"rgba(201,168,76,.4)":"rgba(255,255,255,.06)"};
-        cursor:pointer;display:flex;gap:8px;align-items:flex-start;transition:all .2s">
-        <span style="font-size:12px;color:var(--gold);font-weight:700;min-width:18px;margin-top:1px">${i+1}</span>
-        <span style="font-size:12px;color:${i===idx?"var(--gold-soft)":"var(--gray-lt)"};font-style:italic;
-          font-family:'Cormorant Garamond',serif;line-height:1.5">${a}</span>
+        display:flex;gap:8px;align-items:flex-start">
+        <span data-action="set-aff" data-idx="${i}"
+          style="font-size:12px;color:var(--gold);font-weight:700;min-width:18px;margin-top:1px;cursor:pointer">${i+1}</span>
+        <span data-action="set-aff" data-idx="${i}"
+          style="flex:1;font-size:12px;color:${i===idx?"var(--gold-soft)":"var(--gray-lt)"};font-style:italic;
+          font-family:'Cormorant Garamond',serif;line-height:1.5;cursor:pointer">${a}</span>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px"
+            data-action="edit-affirmation" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:#EF4444;font-size:12px;cursor:pointer;padding:2px"
+            data-action="delete-affirmation" data-idx="${i}">✕</button>
+        </div>
       </div>`).join("")}
   </div>
+
   <div class="card">
-    <div class="card-title">🌟 Vision Board</div>
-    <div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-bottom:14px">This is the life I am creating. I see it. I believe it. I build it daily.</div>
-    <div class="vision-grid">
-      ${S.vision.map((v,i)=>`
-        <div class="vision-card">
-          <div style="font-size:22px;margin-bottom:6px">${v.icon}</div>
-          <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:3px">${v.title}</div>
-          <div style="font-size:10px;color:var(--gray-lt);line-height:1.5">${v.detail}</div>
-          <input value="${v.metric||""}" placeholder="My target / milestone..."
-            style="font-size:10px;padding:5px 8px;margin-top:8px;background:rgba(255,255,255,.04)"
-            data-action="vision-metric" data-idx="${i}"/>
-        </div>`).join("")}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin:0">🌟 Vision Categories</div>
+      <button style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:6px 12px;cursor:pointer"
+        data-action="add-vision-category">+ Add</button>
     </div>
+    <div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">This is the life I am creating. Edit each category to write your vision.</div>
+    ${S.vision.map((v,i)=>`
+      <div class="card" style="border-left:4px solid ${v.color||C.gold};margin-bottom:10px;padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:24px">${v.icon}</span>
+          <div style="font-size:15px;font-weight:700;color:${v.color||C.gold};font-family:'Cormorant Garamond',serif;flex:1">${v.title}</div>
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+            data-action="edit-vision-category" data-idx="${i}">✏️</button>
+        </div>
+        <div class="label" style="margin-bottom:4px">MY VISION FOR THIS AREA</div>
+        <textarea style="min-height:100px;font-family:'Cormorant Garamond',serif;font-size:14px;font-style:italic;line-height:1.8;margin-bottom:8px"
+          placeholder="Write your vision for ${v.title} in vivid detail... I am, I have, I create..."
+          data-action="vision-goals" data-idx="${i}">${v.goals||""}</textarea>
+        <div class="label" style="margin-bottom:4px">AFFIRMATION / INTENTION</div>
+        <input style="font-size:12px;margin-bottom:6px" placeholder="I am / I have / I attract..."
+          value="${(v.intentions||"").replace(/"/g,"&quot;")}" data-action="vision-intentions" data-idx="${i}"/>
+        <div class="label" style="margin-bottom:4px">KEY METRIC / MILESTONE</div>
+        <input style="font-size:12px" placeholder="How will you measure success?"
+          value="${(v.metric||"").replace(/"/g,"&quot;")}" data-action="vision-metric" data-idx="${i}"/>
+      </div>`).join("")}
   </div>`;
 }
 
@@ -1745,22 +1826,30 @@ function renderRituals(){
 
 function renderCelebrations(){
   return `
-  ${sectionHdr("🎉","Celebrations & Boundaries","Honor who you are. Protect your peace.")}
-  <div class="card" style="background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.02));border:1px solid rgba(201,168,76,.35);margin-bottom:14px">
+  ${sectionHdr("🎉","Celebrations","Honor who you are and how far you've come.")}
+  <div class="card" style="background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.02));border:1px solid rgba(201,168,76,.35)">
     <div class="card-title">🎉 Things I Celebrate About Myself</div>
     <div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">Read these when you need a reminder of how powerful you are.</div>
     ${(S.celebrations||[]).map((c,i)=>`
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(201,168,76,.1)">
         <span style="font-size:15px;margin-top:2px">✨</span>
         <div style="flex:1;font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--gold-soft);font-style:italic;line-height:1.5">${c}</div>
-        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
-          data-action="edit-celebration" data-idx="${i}">✏️</button>
+        <div style="display:flex;gap:4px">
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+            data-action="edit-celebration" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:#EF4444;font-size:12px;cursor:pointer"
+            data-action="delete-celebration" data-idx="${i}">✕</button>
+        </div>
       </div>`).join("")}
     <button class="btn btn-outline btn-block" style="margin-top:12px" data-action="add-celebration">+ Add Celebration</button>
-  </div>
+  </div>`;
+}
+
+function renderBoundaries(){
+  return `
+  ${sectionHdr("🛡️","My Boundaries","Non-negotiable. These protect your energy and peace.")}
   <div class="card">
-    <div class="card-title">🛡️ My Boundaries</div>
-    <div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">Non-negotiable. These protect your energy and peace.</div>
+    <div style="font-size:11px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">Set and honor the limits that protect your time, energy, and joy.</div>
     ${(S.boundaries||[]).map((b,i)=>`
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
         <div data-action="toggle-boundary" data-idx="${i}"
@@ -1769,10 +1858,14 @@ function renderCelebrations(){
           cursor:pointer;font-size:11px;color:white;font-weight:700;flex-shrink:0;margin-top:2px;transition:all .2s">${b.active?"✓":""}</div>
         <div style="flex:1">
           <div style="font-size:13px;color:${b.active?"var(--gold-soft)":"var(--gray-lt)"};line-height:1.4">${b.boundary}</div>
-          <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">${tag(b.area,C.green)}</div>
+          <div style="font-size:9px;margin-top:4px">${tag(b.area||"Personal",C.teal)}</div>
         </div>
-        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
-          data-action="edit-boundary" data-idx="${i}">✏️</button>
+        <div style="display:flex;gap:4px">
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+            data-action="edit-boundary" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:#EF4444;font-size:12px;cursor:pointer"
+            data-action="delete-boundary" data-idx="${i}">✕</button>
+        </div>
       </div>`).join("")}
     <button class="btn btn-outline btn-block" style="margin-top:12px" data-action="add-boundary">+ Add Boundary</button>
   </div>`;
@@ -1880,7 +1973,7 @@ const RENDERS = {
   reading:      renderReading,
   rituals:      renderRituals,
   celebrations: renderCelebrations,
-  boundaries:   renderCelebrations,
+  boundaries:   renderBoundaries,
   parenting:    renderParenting,
   education:    renderEducation,
   resources:    renderResources,
@@ -2175,6 +2268,9 @@ function handleClick(e){
         {key:"item",label:"Celebration",val:S.celebrations[idx]},
       ], vals => { S.celebrations[idx]=vals.item; }); break;
 
+    case "delete-celebration":
+      if(confirm("Remove this celebration?")){ S.celebrations.splice(idx,1); save(); render(); } break;
+
     case "add-boundary":
       openModal("Add a Boundary",[
         {key:"boundary",label:"My Boundary",val:"",placeholder:"I do not / I will not / I protect..."},
@@ -2186,6 +2282,159 @@ function handleClick(e){
         {key:"boundary",label:"Boundary",val:S.boundaries[idx].boundary},
         {key:"area",label:"Area",val:S.boundaries[idx].area},
       ], vals => { Object.assign(S.boundaries[idx],vals); }); break;
+
+    case "delete-boundary":
+      if(confirm("Remove this boundary?")){ S.boundaries.splice(idx,1); save(); render(); } break;
+
+    // ── SCHEDULE ──
+    case "add-schedule":
+      openModal("Add Time Block",[
+        {key:"time",  label:"Time",       val:"",  placeholder:"e.g. 7:00 AM"},
+        {key:"task",  label:"Task",        val:"",  placeholder:"What are you doing?"},
+        {key:"area",  label:"Category",  type:"select", val:"Personal",
+          options:["Wellness","DBA Job","Kudrant Lab","Accelerator","Poetry","Personal","Family"].map(v=>({val:v,label:v}))},
+      ], vals => {
+        S.schedule.push({...vals, done:false});
+        S.schedule.sort((a,b)=>{
+          const toMin=t=>{const m=t.match(/(\d+):(\d+)\s*(AM|PM)/i);if(!m)return 0;let h=parseInt(m[1]),mi=parseInt(m[2]);if(m[3].toUpperCase()==="PM"&&h!==12)h+=12;if(m[3].toUpperCase()==="AM"&&h===12)h=0;return h*60+mi;};
+          return toMin(a.time)-toMin(b.time);
+        });
+      }); break;
+
+    case "edit-schedule":
+      openModal("Edit Time Block",[
+        {key:"time", label:"Time",        val:S.schedule[idx].time,  placeholder:"e.g. 7:00 AM"},
+        {key:"task", label:"Task",         val:S.schedule[idx].task,  placeholder:"What are you doing?"},
+        {key:"area", label:"Category", type:"select", val:S.schedule[idx].area||"Personal",
+          options:["Wellness","DBA Job","Kudrant Lab","Accelerator","Poetry","Personal","Family"].map(v=>({val:v,label:v}))},
+      ], vals => { Object.assign(S.schedule[idx], vals); }); break;
+
+    case "delete-schedule":
+      S.schedule.splice(idx,1); save(); render(); break;
+
+    // ── WELLNESS ──
+    case "add-wellness":
+      openModal("Add Wellness Habit",[
+        {key:"icon",  label:"Icon (emoji)", val:"✨", placeholder:"✨"},
+        {key:"label", label:"Habit Name",    val:"",  placeholder:"e.g. Cold shower, Journaling"},
+      ], vals => { S.wellness.push({...vals, done:false}); }); break;
+
+    case "edit-wellness":
+      openModal("Edit Wellness Habit",[
+        {key:"icon",  label:"Icon (emoji)", val:S.wellness[idx].icon},
+        {key:"label", label:"Habit Name",   val:S.wellness[idx].label},
+      ], vals => { Object.assign(S.wellness[idx], vals); }); break;
+
+    case "delete-wellness":
+      S.wellness.splice(idx,1); save(); render(); break;
+
+    // ── AFFIRMATIONS ──
+    case "add-affirmation":
+      openModal("Add Affirmation",[
+        {key:"text", label:"Your Affirmation", val:"", placeholder:"I am / I have / I create..."},
+      ], vals => { S.affirmations.push(vals.text); }); break;
+
+    case "edit-affirmation":
+      openModal("Edit Affirmation",[
+        {key:"text", label:"Affirmation", val:S.affirmations[idx]},
+      ], vals => { S.affirmations[idx]=vals.text; }); break;
+
+    case "delete-affirmation":
+      if(S.affirmations.length>1){
+        S.affirmations.splice(idx,1);
+        S.affIdx = Math.min(S.affIdx, S.affirmations.length-1);
+        save(); render();
+      } break;
+
+    // ── VISION CATEGORIES ──
+    case "add-vision-category":
+      openModal("Add Vision Category",[
+        {key:"icon",  label:"Icon (emoji)", val:"🌟", placeholder:"🌟"},
+        {key:"title", label:"Category Name", val:"",  placeholder:"e.g. Wealth, Love, Health"},
+        {key:"color", label:"Color (hex)",   val:"#C9A84C", placeholder:"#C9A84C"},
+      ], vals => { S.vision.push({...vals, goals:"", intentions:"", metric:""}); }); break;
+
+    case "edit-vision-category":
+      openModal("Edit Vision Category",[
+        {key:"icon",  label:"Icon (emoji)", val:S.vision[idx].icon},
+        {key:"title", label:"Category Name", val:S.vision[idx].title},
+        {key:"color", label:"Color (hex)",   val:S.vision[idx].color||"#C9A84C"},
+      ], vals => { Object.assign(S.vision[idx], vals); }); break;
+
+    // ── REVENUE META ──
+    case "edit-revenue-meta":
+      openModal("Revenue Settings",[
+        {key:"targetMonthly", label:"Target Monthly Income ($)", val:(S.revenueMeta||{}).targetMonthly||50000, type:"number"},
+        {key:"taxRate",       label:"Estimated Tax Rate (%)",    val:(S.revenueMeta||{}).taxRate||25,          type:"number"},
+      ], vals => {
+        S.revenueMeta = {targetMonthly:Number(vals.targetMonthly), taxRate:Number(vals.taxRate)};
+      }); break;
+
+    // ── DEBT ──
+    case "add-debt":
+      openModal("Add Debt",[
+        {key:"name",     label:"Debt Name",           val:"",    placeholder:"💳 Credit Card"},
+        {key:"balance",  label:"Current Balance ($)", val:"",    type:"number"},
+        {key:"original", label:"Original Amount ($)", val:"",    type:"number"},
+        {key:"rate",     label:"Interest Rate (%)",   val:"",    type:"number"},
+        {key:"min",      label:"Min Payment ($/mo)",  val:"",    type:"number"},
+        {key:"color",    label:"Color (hex)",          val:"#EF4444", placeholder:"#EF4444"},
+      ], vals => { S.debts.push({...vals, balance:Number(vals.balance), original:Number(vals.original), rate:Number(vals.rate), min:Number(vals.min)}); }); break;
+
+    case "edit-debt":
+      openModal("Edit Debt",[
+        {key:"name",     label:"Debt Name",           val:S.debts[idx].name},
+        {key:"balance",  label:"Current Balance ($)", val:S.debts[idx].balance,  type:"number"},
+        {key:"original", label:"Original Amount ($)", val:S.debts[idx].original, type:"number"},
+        {key:"rate",     label:"Interest Rate (%)",   val:S.debts[idx].rate,     type:"number"},
+        {key:"min",      label:"Min Payment ($/mo)",  val:S.debts[idx].min,      type:"number"},
+      ], vals => { Object.assign(S.debts[idx], vals); }); break;
+
+    case "delete-debt":
+      if(confirm(`Delete "${S.debts[idx].name}"?`)){ S.debts.splice(idx,1); save(); render(); } break;
+
+    // ── SAVINGS ──
+    case "add-saving":
+      openModal("Add Savings Goal",[
+        {key:"name",    label:"Goal Name",               val:"",      placeholder:"🏠 Home Down Payment"},
+        {key:"target",  label:"Target Amount ($)",       val:"",      type:"number"},
+        {key:"saved",   label:"Amount Already Saved ($)",val:"0",     type:"number"},
+        {key:"monthly", label:"Monthly Contribution ($)",val:"",      type:"number"},
+        {key:"color",   label:"Color (hex)",              val:"#10B981", placeholder:"#10B981"},
+      ], vals => { S.savings.push({...vals, target:Number(vals.target), saved:Number(vals.saved), monthly:Number(vals.monthly)}); }); break;
+
+    case "edit-saving":
+      openModal("Edit Savings Goal",[
+        {key:"name",    label:"Goal Name",                val:S.savings[idx].name},
+        {key:"target",  label:"Target Amount ($)",        val:S.savings[idx].target,  type:"number"},
+        {key:"saved",   label:"Amount Saved ($)",         val:S.savings[idx].saved,   type:"number"},
+        {key:"monthly", label:"Monthly Contribution ($)", val:S.savings[idx].monthly, type:"number"},
+      ], vals => { Object.assign(S.savings[idx], vals); }); break;
+
+    case "delete-saving":
+      if(confirm(`Delete "${S.savings[idx].name}"?`)){ S.savings.splice(idx,1); save(); render(); } break;
+
+    // ── APPOINTMENTS ──
+    case "add-appt":
+      openModal("Add Appointment",[
+        {key:"type",     label:"Appointment Type",  val:"",  placeholder:"🩺 Primary Care"},
+        {key:"provider", label:"Provider Name",     val:"",  placeholder:"Dr. Smith"},
+        {key:"date",     label:"Date",               val:"",  placeholder:"MM/DD"},
+        {key:"time",     label:"Time",               val:"",  placeholder:"2:00 PM"},
+        {key:"notes",    label:"Notes",              val:"",  placeholder:"Details..."},
+      ], vals => { S.appointments.push({...vals, done:false}); }); break;
+
+    case "edit-appt":
+      openModal("Edit Appointment",[
+        {key:"type",     label:"Appointment Type",  val:S.appointments[idx].type},
+        {key:"provider", label:"Provider Name",     val:S.appointments[idx].provider||""},
+        {key:"date",     label:"Date",               val:S.appointments[idx].date||""},
+        {key:"time",     label:"Time",               val:S.appointments[idx].time||""},
+        {key:"notes",    label:"Notes",              val:S.appointments[idx].notes||""},
+      ], vals => { Object.assign(S.appointments[idx], vals); }); break;
+
+    case "delete-appt":
+      if(confirm(`Delete "${S.appointments[idx].type}"?`)){ S.appointments.splice(idx,1); save(); render(); } break;
 
     case "add-parenting":
       openModal("Add Connection Task",[
@@ -2256,6 +2505,11 @@ function handleInput(e){
     case "med-feeling": {
       const idx = parseInt(el.dataset.idx);
       S.meditation[idx].feeling = el.value;
+      save(); break;
+    }
+    case "med-intention": {
+      const idx = parseInt(el.dataset.idx);
+      S.meditation[idx].intention = el.value;
       save(); break;
     }
     case "appt-field": {
