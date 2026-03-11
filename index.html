@@ -824,6 +824,44 @@ function checkDailyReset(){
     S.lastReset = today;
     save();
   }
+
+  // Monthly bill reset — runs on the 1st of each month
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${now.getMonth()+1}`;
+  if(S.lastBillReset !== thisMonth){
+    if(now.getDate() === 1){
+      resetBillsPaid();
+      S.lastBillReset = thisMonth;
+      save();
+      showSyncToast("🔄 New month — all bill checkmarks reset!");
+    }
+  }
+
+  // Monthly debt snapshot — capture balances on the 1st of each month
+  if(S.lastDebtSnapshot !== thisMonth){
+    if(now.getDate() === 1){
+      takeDebtSnapshot(thisMonth);
+      S.lastDebtSnapshot = thisMonth;
+      save();
+    }
+  }
+}
+
+function resetBillsPaid(){
+  (S.personalBills||[]).forEach(b => b.paid = false);
+  (S.bizBills||[]).forEach(b => b.paid = false);
+}
+
+function takeDebtSnapshot(monthKey){
+  if(!S.debtSnapshots) S.debtSnapshots = [];
+  S.debtSnapshots.push({
+    month: monthKey,
+    date: new Date().toISOString().split("T")[0],
+    total: S.debts.reduce((a,d)=>a+Number(d.balance),0),
+    items: S.debts.map(d=>({name:d.name, balance:Number(d.balance)}))
+  });
+  // Keep last 24 months only
+  if(S.debtSnapshots.length > 24) S.debtSnapshots = S.debtSnapshots.slice(-24);
 }
 
 let saveDebounce;
@@ -1331,7 +1369,16 @@ function renderBills(){
     return `
     ${sectionHdr("💳","Bills Control Center","Personal vs Business. Know every dollar going out.")}
 
-    <!-- Grand summary -->
+    <!-- Month info + manual reset -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--gold-dk)">
+        📅 ${new Date().toLocaleString("default",{month:"long",year:"numeric"})}
+        ${S.lastBillReset ? `· Last reset: ${S.lastBillReset}` : "· Never reset"}
+      </div>
+      <button style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;
+        color:#EF4444;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:6px 14px;cursor:pointer"
+        data-action="reset-bills-manual">🔄 Reset Month</button>
+    </div>
     <div class="card" style="text-align:center;border-top:3px solid ${C.gold};margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
         <div>
@@ -1532,7 +1579,47 @@ function renderDebt(){
       <strong style="color:${C.red}">highest interest debt first</strong>. 
       That's <strong style="color:${C.red}">${worstDebt.name} at ${worstDebt.rate}% APR</strong>. Every extra $100/month saves you hundreds in interest.
     </div>
-  </div>`:""}`;
+  </div>`:""}
+
+  <!-- Monthly Progress History -->
+  ${(()=>{
+    const snaps = (S.debtSnapshots||[]).slice().reverse();
+    if(!snaps.length) return `
+    <div class="card" style="border:1px dashed rgba(255,255,255,.1);text-align:center;padding:18px">
+      <div style="font-size:11px;color:var(--gray-lt);margin-bottom:8px">No monthly snapshots yet.</div>
+      <div style="font-size:10px;color:var(--gold-dk);font-style:italic">Snapshots auto-save on the 1st of each month, or tap the button below to save one now.</div>
+    </div>`;
+    const first = snaps[snaps.length-1].total;
+    const latest = snaps[0].total;
+    const totalPaidDown = first - latest;
+    return `
+    <div class="card" style="margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="card-title" style="margin:0">📉 Monthly Progress</div>
+        <div style="font-size:11px;color:${C.green};font-weight:700">${fmtD(Math.round(totalPaidDown))} paid down total</div>
+      </div>
+      <div style="overflow-x:auto">
+        <div style="display:grid;grid-template-columns:repeat(${Math.min(snaps.length,6)},1fr);gap:6px;min-width:0">
+          ${snaps.slice(0,6).map((snap,si)=>{
+            const prev = snaps[si+1];
+            const change = prev ? snap.total - prev.total : 0;
+            const improved = change < 0;
+            const [yr,mo] = snap.month.split("-");
+            const label = new Date(yr,parseInt(mo)-1).toLocaleString("default",{month:"short"})+" '"+yr.slice(2);
+            return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 8px;text-align:center">
+              <div style="font-size:9px;color:var(--gold-dk);margin-bottom:4px">${label}</div>
+              <div style="font-size:13px;font-weight:700;color:${C.red};font-family:'Cormorant Garamond',serif">${fmtD(Math.round(snap.total))}</div>
+              ${prev?`<div style="font-size:9px;margin-top:3px;font-weight:700;color:${improved?C.green:C.red}">${improved?"↓ "+fmtD(Math.round(-change)):"↑ "+fmtD(Math.round(change))}</div>`:`<div style="font-size:9px;color:var(--gray-lt);margin-top:3px">baseline</div>`}
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>`;
+  })()}
+
+  <button class="btn btn-outline btn-block" style="margin-top:10px" data-action="take-debt-snapshot">
+    📸 Save Snapshot Now
+  </button>`;
 }
 
 // ── SAVINGS ──────────────────────────────────────────────────
@@ -3056,6 +3143,25 @@ function handleClick(e){
 
     case "delete-debt":
       if(confirm(`Delete "${S.debts[idx].name}"?`)){ S.debts.splice(idx,1); save(); render(); } break;
+
+    case "reset-bills-manual":
+      if(confirm("Reset all bill checkmarks for the new month? This will uncheck all paid bills.")){
+        resetBillsPaid();
+        const now2 = new Date();
+        S.lastBillReset = `${now2.getFullYear()}-${now2.getMonth()+1}`;
+        save(); render();
+        showSyncToast("🔄 All bills reset for the new month!");
+      } break;
+
+    case "take-debt-snapshot": {
+      const now3 = new Date();
+      const mKey = `${now3.getFullYear()}-${now3.getMonth()+1}`;
+      takeDebtSnapshot(mKey);
+      S.lastDebtSnapshot = mKey;
+      save(); render();
+      showSyncToast("📸 Debt snapshot saved!");
+      break;
+    }
 
     // ── SAVINGS ──
     case "add-saving":
