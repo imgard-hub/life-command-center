@@ -515,18 +515,25 @@ const DEFAULTS = {
     {icon:"🙏",label:"Affirmations / Prayer",done:false},
     {icon:"✨",label:"Skincare Routine",done:false},
   ],
-  bills:[
-    {name:"🏠 Rent / Mortgage",due:"1st",amount:1450,paid:false,auto:true},
-    {name:"⚡ Electric / Gas",due:"15th",amount:120,paid:false,auto:true},
-    {name:"📱 Cell Phone",due:"5th",amount:85,paid:false,auto:true},
-    {name:"🌐 Internet",due:"10th",amount:65,paid:false,auto:false},
-    {name:"💳 Credit Card 1",due:"25th",amount:350,paid:false,auto:false},
-    {name:"🚗 Car Payment",due:"5th",amount:420,paid:false,auto:true},
-    {name:"🏥 Health Insurance",due:"1st",amount:280,paid:false,auto:true},
-    {name:"🎬 Netflix/Streaming",due:"15th",amount:22,paid:false,auto:true},
-    {name:"💊 Prescriptions",due:"20th",amount:45,paid:false,auto:false},
-    {name:"🎵 Spotify",due:"10th",amount:11,paid:false,auto:true},
+  personalBills:[
+    {name:"🏠 Rent / Mortgage",   category:"Housing",      amount:1450, due:"1st",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Bank Transfer", notes:""},
+    {name:"⚡ Electric / Gas",     category:"Utilities",    amount:120,  due:"15th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
+    {name:"📱 Cell Phone",         category:"Utilities",    amount:85,   due:"5th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
+    {name:"🌐 Internet",           category:"Utilities",    amount:65,   due:"10th", freq:"Monthly",  auto:false, paid:false, payMethod:"Bank Transfer", notes:""},
+    {name:"🚗 Car Payment",        category:"Transport",    amount:420,  due:"5th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
+    {name:"🏥 Health Insurance",   category:"Health",       amount:280,  due:"1st",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Auto-Pay",      notes:""},
+    {name:"🎬 Netflix/Streaming",  category:"Subscription", amount:22,   due:"15th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Credit Card",   notes:""},
+    {name:"🎵 Spotify",            category:"Subscription", amount:11,   due:"10th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Credit Card",   notes:""},
+    {name:"💊 Prescriptions",      category:"Health",       amount:45,   due:"20th", freq:"Monthly",  auto:false, paid:false, payMethod:"Manual",        notes:""},
   ],
+  bizBills:[
+    {name:"Skool",        business:"Kudrant Lab",  amount:99,  due:"5th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Community platform"},
+    {name:"Kartra",       business:"Accelerator",  amount:199, due:"12th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Funnel + email"},
+    {name:"Canva Pro",    business:"Content",      amount:15,  due:"18th", freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Design tool"},
+    {name:"Zoom",         business:"All",          amount:15,  due:"8th",  freq:"Monthly",  auto:true,  paid:false, payMethod:"Business Card", notes:"Calls & webinars"},
+    {name:"Domain/Host",  business:"Website",      amount:20,  due:"1st",  freq:"Yearly",   auto:false, paid:false, payMethod:"Business Card", notes:"Annual renewal"},
+  ],
+  bills:[],
   debts:[
     {name:"💳 Credit Card 1",balance:3200,original:5000,rate:22.9,min:96,color:"#EF4444"},
     {name:"💳 Credit Card 2",balance:1800,original:2500,rate:18.5,min:54,color:"#F59E0B"},
@@ -964,9 +971,10 @@ function updateHeader(){
 function renderDashboard(){
   const wellDone = S.wellness.filter(w=>w.done).length;
   const schedDone = S.schedule.filter(s=>s.done).length;
-  const billsPaid = S.bills.filter(b=>b.paid).length;
-  const totalBills = S.bills.reduce((a,b)=>a+b.amount,0);
-  const paidAmt = S.bills.filter(b=>b.paid).reduce((a,b)=>a+b.amount,0);
+  const allBills = [...(S.personalBills||[]),...(S.bizBills||[])];
+  const billsPaid = allBills.filter(b=>b.paid).length;
+  const totalBills = allBills.reduce((a,b)=>a+Number(b.amount),0);
+  const paidAmt = allBills.filter(b=>b.paid).reduce((a,b)=>a+Number(b.amount),0);
   const totalRev = S.revenue.reduce((a,r)=>a+r.price*r.current,0);
   const targetRev = S.revenue.reduce((a,r)=>a+r.price*r.target,0);
   const totalSaved = S.savings.reduce((a,s)=>a+s.saved,0);
@@ -1235,38 +1243,245 @@ function renderMeals(){
 
 // ── BILLS ────────────────────────────────────────────────────
 function renderBills(){
-  const totalBills = S.bills.reduce((a,b)=>a+b.amount,0);
-  const paidAmt = S.bills.filter(b=>b.paid).reduce((a,b)=>a+b.amount,0);
-  const billsPaid = S.bills.filter(b=>b.paid).length;
-  return `
-  ${sectionHdr("💳","Bills & Payments","Know exactly what's due, what's paid, what's coming.")}
-  <div class="stat-grid g3">
-    ${statCard("Total Due",fmtD(totalBills),"this month",C.gold)}
-    ${statCard("Paid",fmtD(paidAmt),"cleared",C.green,pct(paidAmt,totalBills))}
-    ${statCard("Owed",fmtD(totalBills-paidAmt),"remaining",C.red,pct(totalBills-paidAmt,totalBills))}
-  </div>
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <div class="card-title" style="margin:0">Monthly Bills</div>
-      <div style="font-size:11px;color:${C.green};font-weight:700">${billsPaid}/${S.bills.length} paid</div>
-    </div>
-    ${bar(pct(billsPaid,S.bills.length),C.green,10)}
-  </div>
-  <div class="card" style="padding:0;overflow:hidden">
-    ${S.bills.map((b,i)=>`
-      <div class="bill-row ${b.paid?"paid":""}" data-action="toggle-bill" data-idx="${i}">
-        ${chkBox(b.paid,C.green)}
-        <div style="flex:1;min-width:0">
-          <div class="bill-name" style="color:${b.paid?"var(--gold-dk)":"var(--gold-soft)"};
-            text-decoration:${b.paid?"line-through":"none"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.name}</div>
-          <div class="bill-meta">Due ${b.due} · ${b.auto?"🔄 Auto-pay":"⚠️ Manual"}</div>
+  const pb = S.personalBills || [];
+  const bb = S.bizBills || [];
+
+  const personalTotal  = pb.reduce((a,b)=>a+Number(b.amount),0);
+  const personalPaid   = pb.filter(b=>b.paid).reduce((a,b)=>a+Number(b.amount),0);
+  const bizTotal       = bb.reduce((a,b)=>a+Number(b.amount),0);
+  const bizPaid        = bb.filter(b=>b.paid).reduce((a,b)=>a+Number(b.amount),0);
+  const grandTotal     = personalTotal + bizTotal;
+  const grandPaid      = personalPaid  + bizPaid;
+
+  const PERSONAL_CATS  = ["Housing","Utilities","Transport","Health","Subscription","Food","Insurance","Other"];
+  const BIZ_CATS       = ["Kudrant Lab","Accelerator","Rescue+","Content","Website","Marketing","Software","Other"];
+  const FREQS          = ["Monthly","Yearly","Quarterly","Weekly"];
+  const PAY_METHODS    = ["Auto-Pay","Bank Transfer","Credit Card","Business Card","Manual","Cash"];
+
+  // Today's day-of-month for due-soon logic
+  const todayDay = new Date().getDate();
+  function isDueSoon(due){
+    const d = parseInt(due);
+    if(isNaN(d)) return false;
+    return (d >= todayDay) && (d <= todayDay + 5);
+  }
+  function isOverdue(due, paid){
+    if(paid) return false;
+    const d = parseInt(due);
+    if(isNaN(d)) return false;
+    return d < todayDay;
+  }
+  function dueColor(b){
+    if(b.paid) return C.green;
+    if(isOverdue(b.due, b.paid)) return C.red;
+    if(isDueSoon(b.due)) return C.orange;
+    return "var(--gold-soft)";
+  }
+  function dueLabel(b){
+    if(b.paid) return "✅ Paid";
+    if(isOverdue(b.due, b.paid)) return "🔴 Overdue";
+    if(isDueSoon(b.due)) return "🟡 Due Soon";
+    return "⚪ Upcoming";
+  }
+
+  function billRow(b, i, type){
+    const color = dueColor(b);
+    const annual = b.freq==="Yearly" ? Number(b.amount) : b.freq==="Monthly" ? Number(b.amount)*12 : b.freq==="Quarterly" ? Number(b.amount)*4 : Number(b.amount)*52;
+    return `
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;
+      border-bottom:1px solid rgba(255,255,255,.05);
+      background:${b.paid?"rgba(16,185,129,.04)":isOverdue(b.due,b.paid)?"rgba(239,68,68,.04)":isDueSoon(b.due)?"rgba(245,158,11,.04)":"transparent"};
+      transition:background .2s">
+      <div data-action="toggle-${type}-bill" data-idx="${i}"
+        style="width:22px;height:22px;border-radius:50%;border:2px solid ${color};
+        background:${b.paid?color:"transparent"};display:flex;align-items:center;justify-content:center;
+        cursor:pointer;font-size:11px;color:white;font-weight:700;flex-shrink:0;transition:all .2s">${b.paid?"✓":""}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:${b.paid?"var(--gold-dk)":"var(--gold-soft)"};
+          text-decoration:${b.paid?"line-through":"none"};margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.name}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:9px;color:var(--gray-lt)">Due ${b.due} · ${b.freq}</span>
+          <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:${color}22;color:${color};font-weight:700">${dueLabel(b)}</span>
+          <span style="font-size:9px;color:var(--gray-lt)">${b.auto?"🔄 Auto":"⚠️ Manual"}</span>
+          <span style="font-size:9px;color:var(--gray-lt)">${b.payMethod||""}</span>
         </div>
-        <div class="bill-amt" style="color:${b.paid?C.green:"var(--gold-soft)"}">$${b.amount}</div>
-        <button style="background:none;border:none;color:var(--gold-dk);font-size:14px;cursor:pointer;padding:4px;margin-left:4px"
-          data-action="edit-bill" data-idx="${i}">✏️</button>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:${color}">${fmtD(b.amount)}</div>
+        <div style="font-size:9px;color:var(--gray-lt)">${fmtD(annual)}/yr</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:2px"
+          data-action="edit-${type}-bill" data-idx="${i}">✏️</button>
+        <button style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;padding:2px"
+          data-action="delete-${type}-bill" data-idx="${i}">✕</button>
+      </div>
+    </div>`;
+  }
+
+  // Active view tab
+  const bview = window._billsView || "dashboard";
+
+  // ── DASHBOARD VIEW ──
+  if(bview === "dashboard"){
+    const annualPersonal = pb.filter(b=>b.freq!=="Yearly").reduce((a,b)=>a+Number(b.amount)*12,0) + pb.filter(b=>b.freq==="Yearly").reduce((a,b)=>a+Number(b.amount),0);
+    const annualBiz = bb.filter(b=>b.freq!=="Yearly").reduce((a,b)=>a+Number(b.amount)*12,0) + bb.filter(b=>b.freq==="Yearly").reduce((a,b)=>a+Number(b.amount),0);
+    const subCount = pb.filter(b=>b.category==="Subscription").length + bb.length;
+
+    return `
+    ${sectionHdr("💳","Bills Control Center","Personal vs Business. Know every dollar going out.")}
+
+    <!-- Grand summary -->
+    <div class="card" style="text-align:center;border-top:3px solid ${C.gold};margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">PERSONAL</div>
+          <div style="font-size:24px;font-weight:700;color:${C.blue};font-family:'Cormorant Garamond',serif">${fmtD(personalTotal)}</div>
+          <div style="font-size:9px;color:var(--gray-lt)">this month</div>
+        </div>
+        <div style="border-left:1px solid rgba(255,255,255,.08);border-right:1px solid rgba(255,255,255,.08)">
+          <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">BUSINESS</div>
+          <div style="font-size:24px;font-weight:700;color:${C.purple};font-family:'Cormorant Garamond',serif">${fmtD(bizTotal)}</div>
+          <div style="font-size:9px;color:var(--gray-lt)">this month</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">TOTAL</div>
+          <div style="font-size:24px;font-weight:700;color:${C.gold};font-family:'Cormorant Garamond',serif">${fmtD(grandTotal)}</div>
+          <div style="font-size:9px;color:var(--gray-lt)">${fmtD(grandPaid)} paid</div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        ${bar(pct(grandPaid,grandTotal),C.green,8)}
+        <div style="font-size:9px;color:var(--gray-lt);margin-top:4px">${Math.round(pct(grandPaid,grandTotal))}% cleared this month</div>
+      </div>
+    </div>
+
+    <!-- Annual view -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">ANNUAL PERSONAL</div>
+        <div style="font-size:22px;font-weight:700;color:${C.blue};font-family:'Cormorant Garamond',serif">${fmtD(annualPersonal)}</div>
+      </div>
+      <div class="card" style="text-align:center;padding:14px">
+        <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">ANNUAL BUSINESS</div>
+        <div style="font-size:22px;font-weight:700;color:${C.purple};font-family:'Cormorant Garamond',serif">${fmtD(annualBiz)}</div>
+      </div>
+    </div>
+
+    ${subCount > 15 ? `
+    <div class="card" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);margin-bottom:10px">
+      <div style="font-size:12px;color:${C.red};font-weight:700;margin-bottom:4px">⚠️ Subscription Audit</div>
+      <div style="font-size:11px;color:var(--gold-soft)">You have ${subCount} recurring bills. Rule: never more than 15. Review what you can cut.</div>
+    </div>` : ""}
+
+    <!-- Nav to sections -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button style="background:rgba(59,130,246,.1);border:2px solid rgba(59,130,246,.3);border-radius:12px;
+        padding:18px;cursor:pointer;text-align:left"
+        data-action="bills-view" data-view="personal">
+        <div style="font-size:20px;margin-bottom:6px">🏠</div>
+        <div style="font-size:13px;font-weight:700;color:${C.blue}">Personal Bills</div>
+        <div style="font-size:11px;color:var(--gray-lt);margin-top:2px">${pb.length} bills · ${fmtD(personalTotal)}/mo</div>
+        <div style="font-size:10px;color:${C.green};margin-top:4px;font-weight:700">${pb.filter(b=>b.paid).length}/${pb.length} paid</div>
+      </button>
+      <button style="background:rgba(139,92,246,.1);border:2px solid rgba(139,92,246,.3);border-radius:12px;
+        padding:18px;cursor:pointer;text-align:left"
+        data-action="bills-view" data-view="biz">
+        <div style="font-size:20px;margin-bottom:6px">💼</div>
+        <div style="font-size:13px;font-weight:700;color:${C.purple}">Business Bills</div>
+        <div style="font-size:11px;color:var(--gray-lt);margin-top:2px">${bb.length} expenses · ${fmtD(bizTotal)}/mo</div>
+        <div style="font-size:10px;color:${C.green};margin-top:4px;font-weight:700">${bb.filter(b=>b.paid).length}/${bb.length} paid</div>
+      </button>
+    </div>
+
+    <!-- Due soon / overdue alerts -->
+    ${(() => {
+      const alerts = [
+        ...pb.map((b,i)=>({...b,_type:"personal",_i:i})),
+        ...bb.map((b,i)=>({...b,_type:"biz",_i:i}))
+      ].filter(b=>!b.paid && (isOverdue(b.due,b.paid)||isDueSoon(b.due)));
+      if(!alerts.length) return "";
+      return `<div class="card" style="margin-top:10px;border-top:3px solid ${C.orange}">
+        <div style="font-size:11px;font-weight:700;color:${C.orange};margin-bottom:10px">🔔 Needs Attention (${alerts.length})</div>
+        ${alerts.map(b=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+            <div>
+              <div style="font-size:12px;color:var(--gold-soft);font-weight:600">${b.name}</div>
+              <div style="font-size:9px;color:var(--gray-lt)">Due ${b.due} · ${b._type==="biz"?"Business":"Personal"}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;
+                background:${isOverdue(b.due,b.paid)?C.red:C.orange}22;color:${isOverdue(b.due,b.paid)?C.red:C.orange}">
+                ${isOverdue(b.due,b.paid)?"Overdue":"Due Soon"}</span>
+              <span style="font-size:13px;font-weight:700;color:${C.gold}">${fmtD(b.amount)}</span>
+            </div>
+          </div>`).join("")}
+      </div>`;
+    })()}`;
+  }
+
+  // ── PERSONAL BILLS VIEW ──
+  if(bview === "personal"){
+    const byCategory = {};
+    pb.forEach((b,i)=>{
+      if(!byCategory[b.category]) byCategory[b.category]=[];
+      byCategory[b.category].push({...b,_i:i});
+    });
+    return `
+    ${sectionHdr("🏠","Personal Bills","Your household and lifestyle expenses.")}
+    <button style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+      color:var(--gold-dk);font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px 16px;cursor:pointer;margin-bottom:12px"
+      data-action="bills-view" data-view="dashboard">← Dashboard</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      ${statCard("Total",fmtD(personalTotal),"this month",C.blue)}
+      ${statCard("Paid",fmtD(personalPaid),"cleared",C.green,pct(personalPaid,personalTotal))}
+      ${statCard("Owed",fmtD(personalTotal-personalPaid),"remaining",C.red)}
+    </div>
+
+    ${Object.entries(byCategory).map(([cat, items])=>`
+      <div style="margin-bottom:4px">
+        <div style="font-size:10px;color:var(--gold-dk);font-weight:700;letter-spacing:2px;padding:8px 14px 4px">${cat.toUpperCase()}</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          ${items.map(b=>billRow(b, b._i, "personal")).join("")}
+        </div>
       </div>`).join("")}
-  </div>
-  <button class="btn btn-outline btn-block" data-action="add-bill" style="margin-top:10px">+ Add Bill</button>`;
+
+    <button class="btn btn-outline btn-block" style="margin-top:12px" data-action="add-personal-bill">+ Add Personal Bill</button>`;
+  }
+
+  // ── BUSINESS BILLS VIEW ──
+  if(bview === "biz"){
+    const byBiz = {};
+    bb.forEach((b,i)=>{
+      if(!byBiz[b.business]) byBiz[b.business]=[];
+      byBiz[b.business].push({...b,_i:i});
+    });
+    const annualBizTotal = bb.filter(b=>b.freq!=="Yearly").reduce((a,b)=>a+Number(b.amount)*12,0) + bb.filter(b=>b.freq==="Yearly").reduce((a,b)=>a+Number(b.amount),0);
+    return `
+    ${sectionHdr("💼","Business Expenses","Every cost that runs your empire.")}
+    <button style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+      color:var(--gold-dk);font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px 16px;cursor:pointer;margin-bottom:12px"
+      data-action="bills-view" data-view="dashboard">← Dashboard</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      ${statCard("Monthly",fmtD(bizTotal),"expenses",C.purple)}
+      ${statCard("Annual",fmtD(annualBizTotal),"total cost",C.orange)}
+      ${statCard("Paid",fmtD(bizPaid),"this month",C.green,pct(bizPaid,bizTotal))}
+    </div>
+
+    ${Object.entries(byBiz).map(([biz, items])=>`
+      <div style="margin-bottom:4px">
+        <div style="font-size:10px;color:${C.purple};font-weight:700;letter-spacing:2px;padding:8px 14px 4px">${biz.toUpperCase()}</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          ${items.map(b=>billRow(b, b._i, "biz")).join("")}
+        </div>
+      </div>`).join("")}
+
+    <button class="btn btn-outline btn-block" style="margin-top:12px" data-action="add-biz-bill">+ Add Business Expense</button>`;
+  }
+
+  return ``;
 }
 
 // ── DEBT ─────────────────────────────────────────────────────
@@ -2247,8 +2462,78 @@ function handleClick(e){
       save(); render(); break;
 
     case "toggle-bill":
-      S.bills[idx].paid = !S.bills[idx].paid;
-      save(); render(); break;
+      if(S.bills && S.bills[idx]) { S.bills[idx].paid = !S.bills[idx].paid; save(); render(); } break;
+
+    case "bills-view":
+      window._billsView = el.dataset.view; render(); break;
+
+    case "toggle-personal-bill":
+      S.personalBills[idx].paid = !S.personalBills[idx].paid; save(); render(); break;
+
+    case "toggle-biz-bill":
+      S.bizBills[idx].paid = !S.bizBills[idx].paid; save(); render(); break;
+
+    case "add-personal-bill":
+      openModal("Add Personal Bill",[
+        {key:"name",      label:"Bill Name",     val:"",  placeholder:"🏠 Rent / Mortgage"},
+        {key:"category",  label:"Category", type:"select", val:"Housing",
+          options:["Housing","Utilities","Transport","Health","Subscription","Food","Insurance","Other"].map(v=>({val:v,label:v}))},
+        {key:"amount",    label:"Amount ($)",    val:"",  type:"number", placeholder:"0.00"},
+        {key:"due",       label:"Due Day",       val:"",  placeholder:"e.g. 1st, 15th"},
+        {key:"freq",      label:"Frequency", type:"select", val:"Monthly",
+          options:["Monthly","Yearly","Quarterly","Weekly"].map(v=>({val:v,label:v}))},
+        {key:"payMethod", label:"Payment Method", type:"select", val:"Auto-Pay",
+          options:["Auto-Pay","Bank Transfer","Credit Card","Business Card","Manual","Cash"].map(v=>({val:v,label:v}))},
+        {key:"notes",     label:"Notes",         val:"",  placeholder:"Optional..."},
+      ], vals => { S.personalBills.push({...vals, amount:Number(vals.amount), auto:vals.payMethod==="Auto-Pay", paid:false}); }); break;
+
+    case "edit-personal-bill":
+      openModal("Edit Personal Bill",[
+        {key:"name",      label:"Bill Name",  val:S.personalBills[idx].name},
+        {key:"category",  label:"Category", type:"select", val:S.personalBills[idx].category||"Other",
+          options:["Housing","Utilities","Transport","Health","Subscription","Food","Insurance","Other"].map(v=>({val:v,label:v}))},
+        {key:"amount",    label:"Amount ($)", val:S.personalBills[idx].amount, type:"number"},
+        {key:"due",       label:"Due Day",    val:S.personalBills[idx].due, placeholder:"e.g. 1st, 15th"},
+        {key:"freq",      label:"Frequency", type:"select", val:S.personalBills[idx].freq||"Monthly",
+          options:["Monthly","Yearly","Quarterly","Weekly"].map(v=>({val:v,label:v}))},
+        {key:"payMethod", label:"Payment Method", type:"select", val:S.personalBills[idx].payMethod||"Manual",
+          options:["Auto-Pay","Bank Transfer","Credit Card","Business Card","Manual","Cash"].map(v=>({val:v,label:v}))},
+        {key:"notes",     label:"Notes",     val:S.personalBills[idx].notes||""},
+      ], vals => { Object.assign(S.personalBills[idx], {...vals, amount:Number(vals.amount), auto:vals.payMethod==="Auto-Pay"}); }); break;
+
+    case "delete-personal-bill":
+      if(confirm(`Delete "${S.personalBills[idx].name}"?`)){ S.personalBills.splice(idx,1); save(); render(); } break;
+
+    case "add-biz-bill":
+      openModal("Add Business Expense",[
+        {key:"name",      label:"Expense Name",  val:"",  placeholder:"e.g. Skool, Kartra, Canva"},
+        {key:"business",  label:"Business", type:"select", val:"Kudrant Lab",
+          options:["Kudrant Lab","Accelerator","Rescue+","Content","Website","Marketing","Software","Other"].map(v=>({val:v,label:v}))},
+        {key:"amount",    label:"Amount ($)",    val:"",  type:"number", placeholder:"0.00"},
+        {key:"due",       label:"Due Day",       val:"",  placeholder:"e.g. 5th, 12th"},
+        {key:"freq",      label:"Frequency", type:"select", val:"Monthly",
+          options:["Monthly","Yearly","Quarterly","Weekly"].map(v=>({val:v,label:v}))},
+        {key:"payMethod", label:"Payment Method", type:"select", val:"Business Card",
+          options:["Auto-Pay","Bank Transfer","Credit Card","Business Card","Manual","Cash"].map(v=>({val:v,label:v}))},
+        {key:"notes",     label:"Notes",         val:"",  placeholder:"What is this for?"},
+      ], vals => { S.bizBills.push({...vals, amount:Number(vals.amount), auto:vals.payMethod==="Auto-Pay", paid:false}); }); break;
+
+    case "edit-biz-bill":
+      openModal("Edit Business Expense",[
+        {key:"name",      label:"Expense Name",  val:S.bizBills[idx].name},
+        {key:"business",  label:"Business", type:"select", val:S.bizBills[idx].business||"Other",
+          options:["Kudrant Lab","Accelerator","Rescue+","Content","Website","Marketing","Software","Other"].map(v=>({val:v,label:v}))},
+        {key:"amount",    label:"Amount ($)",    val:S.bizBills[idx].amount, type:"number"},
+        {key:"due",       label:"Due Day",       val:S.bizBills[idx].due, placeholder:"e.g. 5th, 12th"},
+        {key:"freq",      label:"Frequency", type:"select", val:S.bizBills[idx].freq||"Monthly",
+          options:["Monthly","Yearly","Quarterly","Weekly"].map(v=>({val:v,label:v}))},
+        {key:"payMethod", label:"Payment Method", type:"select", val:S.bizBills[idx].payMethod||"Business Card",
+          options:["Auto-Pay","Bank Transfer","Credit Card","Business Card","Manual","Cash"].map(v=>({val:v,label:v}))},
+        {key:"notes",     label:"Notes",         val:S.bizBills[idx].notes||""},
+      ], vals => { Object.assign(S.bizBills[idx], {...vals, amount:Number(vals.amount), auto:vals.payMethod==="Auto-Pay"}); }); break;
+
+    case "delete-biz-bill":
+      if(confirm(`Delete "${S.bizBills[idx].name}"?`)){ S.bizBills.splice(idx,1); save(); render(); } break;
 
     case "toggle-meditation":
       S.meditation[idx].done = !S.meditation[idx].done;
@@ -2289,20 +2574,6 @@ function handleClick(e){
         {key:"level",label:"Priority Level",type:"select",val:S.priorities[idx].level,
           options:[{val:"HIGH",label:"🔴 HIGH"},{val:"MEDIUM",label:"🟡 MEDIUM"},{val:"LOW",label:"🟢 LOW"}]},
       ], vals => { Object.assign(S.priorities[idx],vals); }); break;
-
-    case "edit-bill":
-      openModal("Edit Bill",[
-        {key:"name",label:"Bill Name",val:S.bills[idx].name},
-        {key:"amount",label:"Amount ($)",val:S.bills[idx].amount,type:"number"},
-        {key:"due",label:"Due Date",val:S.bills[idx].due,placeholder:"e.g. 1st, 15th"},
-      ], vals => { Object.assign(S.bills[idx],vals); }); break;
-
-    case "add-bill":
-      openModal("Add New Bill",[
-        {key:"name",label:"Bill Name",val:"",placeholder:"🏠 Rent / Mortgage"},
-        {key:"amount",label:"Amount ($)",val:"",type:"number",placeholder:"0.00"},
-        {key:"due",label:"Due Date",val:"",placeholder:"e.g. 1st, 15th"},
-      ], vals => { S.bills.push({...vals,paid:false,auto:false}); }); break;
 
     case "edit-debt":
       openModal("Update Debt Balance",[
