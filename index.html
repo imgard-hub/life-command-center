@@ -547,6 +547,25 @@ const DEFAULTS = {
     {product:"Poetry Books",icon:"📖",price:20,target:100,current:23},
   ],
   revenueMeta:{taxRate:25, targetMonthly:50000},
+  projects:[
+    {id:"P001",name:"Launch Kudrant Lab Membership",category:"Kudrant Lab",why:"Community + income stream toward $50K/mo",start:"2026-01-01",finish:"2026-04-30",priority:"HIGH",status:"In Progress",quarter:"Q2",revenueImpact:"High",notes:""},
+    {id:"P002",name:"DBA Accelerator Revamp",category:"Accelerator",why:"Increase student results & referrals",start:"2026-02-01",finish:"2026-05-15",priority:"HIGH",status:"In Progress",quarter:"Q2",revenueImpact:"High",notes:""},
+    {id:"P003",name:"Grief of Her — Poetry Book",category:"Poetry",why:"Creative expression & healing",start:"2026-01-15",finish:"2026-06-30",priority:"MEDIUM",status:"Planning",quarter:"Q2",revenueImpact:"Medium",notes:""},
+    {id:"P004",name:"Rescue+ Consulting Launch",category:"Rescue+",why:"Database consulting revenue",start:"2026-03-01",finish:"2026-05-01",priority:"HIGH",status:"Planning",quarter:"Q1",revenueImpact:"High",notes:""},
+    {id:"P005",name:"Quantum Awakening — Book 2",category:"Poetry",why:"Expand poetry brand",start:"2026-06-01",finish:"2026-10-31",priority:"LOW",status:"Not Started",quarter:"Q3",revenueImpact:"Medium",notes:""},
+  ],
+  projectTasks:[
+    {projectId:"P001",mainTask:"Build Sales Page",subtask:"Write headline & hook",due:"2026-03-20",priority:"HIGH",status:"Completed",estHours:1,actHours:1,notes:""},
+    {projectId:"P001",mainTask:"Build Sales Page",subtask:"Add testimonials section",due:"2026-03-22",priority:"HIGH",status:"In Progress",estHours:2,actHours:0,notes:""},
+    {projectId:"P001",mainTask:"Build Sales Page",subtask:"Add pricing & checkout",due:"2026-03-25",priority:"HIGH",status:"Not Started",estHours:3,actHours:0,notes:""},
+    {projectId:"P001",mainTask:"Upload Training Videos",subtask:"Record Module 1",due:"2026-03-28",priority:"HIGH",status:"Not Started",estHours:4,actHours:0,notes:""},
+    {projectId:"P001",mainTask:"Upload Training Videos",subtask:"Edit & upload to platform",due:"2026-04-01",priority:"MEDIUM",status:"Not Started",estHours:2,actHours:0,notes:""},
+    {projectId:"P002",mainTask:"Revamp Curriculum",subtask:"Outline new lesson structure",due:"2026-03-30",priority:"HIGH",status:"In Progress",estHours:3,actHours:1,notes:""},
+    {projectId:"P003",mainTask:"Finish Manuscript",subtask:"Edit poems 1–10",due:"2026-04-15",priority:"MEDIUM",status:"Not Started",estHours:5,actHours:0,notes:""},
+    {projectId:"P003",mainTask:"Finish Manuscript",subtask:"Write reflections/prompts",due:"2026-04-30",priority:"MEDIUM",status:"Not Started",estHours:4,actHours:0,notes:""},
+    {projectId:"P004",mainTask:"Create Offer",subtask:"Define service packages",due:"2026-03-15",priority:"HIGH",status:"Completed",estHours:2,actHours:2,notes:""},
+    {projectId:"P004",mainTask:"Create Offer",subtask:"Build proposal template",due:"2026-03-20",priority:"HIGH",status:"In Progress",estHours:2,actHours:0,notes:""},
+  ],
   meditation:[
     {day:"Monday",intention:"$50K monthly income flowing to me",done:false,feeling:""},
     {day:"Tuesday",intention:"Confidence as a leader and teacher",done:false,feeling:""},
@@ -1569,6 +1588,193 @@ function renderAffirmations(){
   </div>`;
 }
 
+// ── PROJECTS ─────────────────────────────────────────────────
+function renderProjects(){
+  const projects = S.projects || [];
+  const tasks = S.projectTasks || [];
+  const statuses = ["Not Started","Planning","In Progress","Waiting","Completed","On Hold"];
+  const priorities = ["HIGH","MEDIUM","LOW"];
+  const categories = ["Kudrant Lab","Accelerator","Rescue+","Poetry","Personal","Home","Health","Business","Other"];
+  const quarters = ["Q1","Q2","Q3","Q4"];
+
+  const STATUS_COLOR = {
+    "Not Started":"#6B7280","Planning":"#8B5CF6","In Progress":"#3B82F6",
+    "Waiting":"#F59E0B","Completed":"#10B981","On Hold":"#EC4899"
+  };
+  const PRIORITY_COLOR = {"HIGH":C.red,"MEDIUM":C.orange,"LOW":C.green};
+
+  const total = projects.length;
+  const done = projects.filter(p=>p.status==="Completed").length;
+  const inProg = projects.filter(p=>p.status==="In Progress").length;
+  const today = new Date().toISOString().split("T")[0];
+
+  // Compute % complete per project from tasks
+  function projPct(pid){
+    const t = tasks.filter(x=>x.projectId===pid);
+    if(!t.length) return 0;
+    return Math.round(t.filter(x=>x.status==="Completed").length / t.length * 100);
+  }
+
+  // Active project view state stored in a global
+  const view = window._projView || "dashboard";
+  const selId = window._projSel || null;
+  const selProj = selId ? projects.find(p=>p.id===selId) : null;
+
+  // --- DASHBOARD VIEW ---
+  if(view === "dashboard"){
+    return `
+    ${sectionHdr("🏗️","2026 Project Finisher","Pick the projects that move your life forward. Build them one task at a time.")}
+
+    <div class="stat-grid g4" style="margin-bottom:14px">
+      ${statCard("Total",total,"projects",C.gold)}
+      ${statCard("In Progress",inProg,"active",C.blue)}
+      ${statCard("Completed",done,"finished",C.green,pct(done,total))}
+      ${statCard("Remaining",total-done,"to finish",C.orange)}
+    </div>
+
+    <!-- Quarter filter -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      ${["All","Q1","Q2","Q3","Q4"].map(q=>`
+        <button style="background:${(window._projQ||"All")===q?"rgba(201,168,76,.25)":"rgba(255,255,255,.04)"};
+          border:1px solid ${(window._projQ||"All")===q?"rgba(201,168,76,.5)":"rgba(255,255,255,.1)"};
+          border-radius:20px;padding:5px 14px;color:${(window._projQ||"All")===q?"var(--gold)":"var(--gray-lt)"};
+          font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;cursor:pointer"
+          data-action="proj-filter-q" data-q="${q}">${q}</button>`).join("")}
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" style="padding:6px 16px;font-size:11px" data-action="add-project">+ New Project</button>
+    </div>
+
+    ${(() => {
+      const filterQ = window._projQ || "All";
+      const filtered = filterQ==="All" ? projects : projects.filter(p=>p.quarter===filterQ);
+      if(!filtered.length) return `<div class="card" style="text-align:center;color:var(--gray-lt);padding:30px">No projects yet. Tap + New Project to start.</div>`;
+      return filtered.map((p,i)=>{
+        const realIdx = projects.indexOf(p);
+        const pp = projPct(p.id);
+        const overdue = p.finish && p.finish < today && p.status !== "Completed";
+        const tasksForProj = tasks.filter(t=>t.projectId===p.id);
+        const doneTasks = tasksForProj.filter(t=>t.status==="Completed").length;
+        return `
+        <div class="card" style="border-left:5px solid ${STATUS_COLOR[p.status]||C.gold};margin-bottom:10px;cursor:pointer"
+          data-action="proj-open" data-id="${p.id}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;
+                  background:${STATUS_COLOR[p.status]}22;color:${STATUS_COLOR[p.status]}">${p.status}</span>
+                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;
+                  background:${PRIORITY_COLOR[p.priority]||C.gold}22;color:${PRIORITY_COLOR[p.priority]||C.gold}">${p.priority}</span>
+                <span style="font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--gray-lt)">${p.category}</span>
+                ${overdue?`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(239,68,68,.15);color:#EF4444">⚠️ OVERDUE</span>`:""}
+              </div>
+              <div style="font-size:15px;font-weight:700;color:var(--gold-soft);font-family:'Cormorant Garamond',serif;line-height:1.3;margin-bottom:3px">${p.name}</div>
+              <div style="font-size:9px;color:var(--gray-lt)">${p.quarter} · Target: ${p.finish||"TBD"} · ${tasksForProj.length} task${tasksForProj.length!==1?"s":""} (${doneTasks} done)</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+              <div style="font-size:22px;font-weight:700;color:${pp>=100?C.green:STATUS_COLOR[p.status]};font-family:'Cormorant Garamond',serif">${pp}%</div>
+              <div style="display:flex;gap:4px">
+                <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:2px"
+                  data-action="edit-project" data-idx="${realIdx}" onclick="event.stopPropagation()">✏️</button>
+                <button style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;padding:2px"
+                  data-action="delete-project" data-idx="${realIdx}" onclick="event.stopPropagation()">🗑️</button>
+              </div>
+            </div>
+          </div>
+          ${bar(pp, pp>=100?C.green:STATUS_COLOR[p.status], 8)}
+          ${p.why?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:6px">💡 ${p.why}</div>`:""}
+        </div>`;
+      }).join("");
+    })()}`;
+  }
+
+  // --- TASK VIEW (single project) ---
+  if(view === "tasks" && selProj){
+    const projTasks = tasks.filter(t=>t.projectId===selId);
+    // Group by mainTask
+    const groups = {};
+    projTasks.forEach((t,i)=>{
+      if(!groups[t.mainTask]) groups[t.mainTask]=[];
+      groups[t.mainTask].push({...t, _gi: tasks.indexOf(t)});
+    });
+    const pp = projPct(selId);
+    const STATUS_COLOR_LOCAL = STATUS_COLOR;
+
+    return `
+    ${sectionHdr("🏗️",selProj.name,selProj.category+" · "+selProj.quarter)}
+    <button style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+      color:var(--gold-dk);font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:8px 16px;cursor:pointer;margin-bottom:12px"
+      data-action="proj-back">← All Projects</button>
+
+    <div class="card" style="margin-bottom:12px;border-top:3px solid ${STATUS_COLOR[selProj.status]}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${STATUS_COLOR[selProj.status]}">${selProj.status}</div>
+          <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">Target: ${selProj.finish||"TBD"} · Priority: ${selProj.priority}</div>
+        </div>
+        <div style="font-size:32px;font-weight:700;color:${pp>=100?C.green:STATUS_COLOR[selProj.status]};font-family:'Cormorant Garamond',serif">${pp}%</div>
+      </div>
+      ${bar(pp, pp>=100?C.green:STATUS_COLOR[selProj.status], 10)}
+      ${selProj.why?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:8px">💡 ${selProj.why}</div>`:""}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold)">Tasks & Subtasks</div>
+      <button style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;
+        color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:6px 14px;cursor:pointer"
+        data-action="add-task">+ Add Task</button>
+    </div>
+
+    ${Object.keys(groups).length===0?`<div class="card" style="text-align:center;color:var(--gray-lt);padding:20px">No tasks yet. Tap + Add Task to begin breaking this project down.</div>`:""}
+
+    ${Object.entries(groups).map(([mainTask, subtasks])=>{
+      const allDone = subtasks.every(t=>t.status==="Completed");
+      const doneCount = subtasks.filter(t=>t.status==="Completed").length;
+      return `
+      <div class="card" style="margin-bottom:10px;border-left:4px solid ${allDone?C.green:C.gold}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${allDone?C.green:"var(--gold-soft)"}">
+              ${allDone?"✅":""} ${mainTask}</div>
+            <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">${doneCount}/${subtasks.length} subtasks done</div>
+          </div>
+          <button style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;
+            color:var(--gold-dk);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer"
+            data-action="add-subtask" data-maintask="${mainTask.replace(/"/g,"&quot;")}">+ Subtask</button>
+        </div>
+        ${subtasks.map(t=>{
+          const overdue = t.due && t.due < today && t.status!=="Completed";
+          return `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.05)">
+            <div data-action="toggle-task" data-taskidx="${t._gi}"
+              style="width:20px;height:20px;border-radius:50%;border:2px solid ${STATUS_COLOR[t.status]||C.gold};
+              background:${t.status==="Completed"?STATUS_COLOR[t.status]:"transparent"};
+              display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:white;flex-shrink:0;transition:all .2s">
+              ${t.status==="Completed"?"✓":""}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;color:${t.status==="Completed"?"var(--gold-dk)":"var(--gold-soft)"};
+                text-decoration:${t.status==="Completed"?"line-through":"none"};margin-bottom:2px">${t.subtask}</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${t.due?`<span style="font-size:9px;color:${overdue?"#EF4444":"var(--gray-lt)"}">📅 ${t.due}${overdue?" ⚠️":""}</span>`:""}
+                <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:${STATUS_COLOR[t.status]||C.gold}22;color:${STATUS_COLOR[t.status]||C.gold}">${t.status}</span>
+                ${t.priority?`<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:${PRIORITY_COLOR[t.priority]||C.gold}22;color:${PRIORITY_COLOR[t.priority]||C.gold}">${t.priority}</span>`:""}
+                ${t.estHours?`<span style="font-size:9px;color:var(--gray-lt)">⏱ ${t.estHours}h est</span>`:""}
+              </div>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px"
+                data-action="edit-task" data-taskidx="${t._gi}">✏️</button>
+              <button style="background:none;border:none;color:#EF4444;font-size:12px;cursor:pointer;padding:2px"
+                data-action="delete-task" data-taskidx="${t._gi}">✕</button>
+            </div>
+          </div>`;}).join("")}
+      </div>`;
+    }).join("")}`;
+  }
+
+  return `<div class="card" style="text-align:center;color:var(--gray-lt)">Loading...</div>`;
+}
+
 // ══════════════════════════════════════════════════════════════
 // RENDER MAP
 // ══════════════════════════════════════════════════════════════
@@ -1964,6 +2170,7 @@ const RENDERS = {
   revenue:      renderRevenue,
   marketing:    renderMarketing,
   appointments: renderAppointments,
+  projects:     renderProjects,
   affirmations: renderAffirmations,
   mission:      renderMission,
   vision:       renderVisionBoard,
@@ -2436,6 +2643,113 @@ function handleClick(e){
     case "delete-appt":
       if(confirm(`Delete "${S.appointments[idx].type}"?`)){ S.appointments.splice(idx,1); save(); render(); } break;
 
+    // ── PROJECT HANDLERS ──
+    case "proj-filter-q":
+      window._projQ = el.dataset.q; render(); break;
+
+    case "proj-open":
+      window._projView = "tasks"; window._projSel = el.dataset.id; render(); break;
+
+    case "proj-back":
+      window._projView = "dashboard"; window._projSel = null; render(); break;
+
+    case "add-project":
+      openModal("Add New Project",[
+        {key:"name",     label:"Project Name",         val:"", placeholder:"e.g. Launch Kudrant Lab"},
+        {key:"category", label:"Category", type:"select", val:"Kudrant Lab",
+          options:["Kudrant Lab","Accelerator","Rescue+","Poetry","Personal","Home","Health","Business","Other"].map(v=>({val:v,label:v}))},
+        {key:"why",      label:"Why This Matters",     val:"", placeholder:"Your deeper reason..."},
+        {key:"finish",   label:"Target Finish Date",   val:"", type:"date"},
+        {key:"quarter",  label:"Quarter", type:"select", val:"Q2",
+          options:["Q1","Q2","Q3","Q4"].map(v=>({val:v,label:v}))},
+        {key:"priority", label:"Priority", type:"select", val:"HIGH",
+          options:[{val:"HIGH",label:"HIGH"},{val:"MEDIUM",label:"MEDIUM"},{val:"LOW",label:"LOW"}]},
+        {key:"revenueImpact",label:"Revenue Impact", type:"select", val:"Medium",
+          options:[{val:"High",label:"High"},{val:"Medium",label:"Medium"},{val:"Low",label:"Low"},{val:"None",label:"None"}]},
+      ], vals => {
+        const newId = "P"+(String(Date.now()).slice(-4));
+        S.projects.push({...vals, id:newId, start:new Date().toISOString().split("T")[0], status:"Not Started", notes:""});
+      }); break;
+
+    case "edit-project":
+      openModal("Edit Project",[
+        {key:"name",     label:"Project Name",   val:S.projects[idx].name},
+        {key:"category", label:"Category", type:"select", val:S.projects[idx].category,
+          options:["Kudrant Lab","Accelerator","Rescue+","Poetry","Personal","Home","Health","Business","Other"].map(v=>({val:v,label:v}))},
+        {key:"why",      label:"Why This Matters", val:S.projects[idx].why||""},
+        {key:"finish",   label:"Target Finish Date", val:S.projects[idx].finish||"", type:"date"},
+        {key:"quarter",  label:"Quarter", type:"select", val:S.projects[idx].quarter||"Q2",
+          options:["Q1","Q2","Q3","Q4"].map(v=>({val:v,label:v}))},
+        {key:"priority", label:"Priority", type:"select", val:S.projects[idx].priority||"MEDIUM",
+          options:[{val:"HIGH",label:"HIGH"},{val:"MEDIUM",label:"MEDIUM"},{val:"LOW",label:"LOW"}]},
+        {key:"status",   label:"Status", type:"select", val:S.projects[idx].status,
+          options:["Not Started","Planning","In Progress","Waiting","Completed","On Hold"].map(v=>({val:v,label:v}))},
+        {key:"revenueImpact",label:"Revenue Impact", type:"select", val:S.projects[idx].revenueImpact||"Medium",
+          options:[{val:"High",label:"High"},{val:"Medium",label:"Medium"},{val:"Low",label:"Low"},{val:"None",label:"None"}]},
+      ], vals => { Object.assign(S.projects[idx], vals); }); break;
+
+    case "delete-project": {
+      const pToDelete = S.projects[idx];
+      if(confirm(`Delete "${pToDelete.name}"? All its tasks will also be removed.`)){
+        S.projectTasks = (S.projectTasks||[]).filter(t=>t.projectId !== pToDelete.id);
+        S.projects.splice(idx,1);
+        save(); render();
+      } break;
+    }
+
+    case "add-task":
+      openModal("Add Task",[
+        {key:"mainTask", label:"Main Task Name",     val:"", placeholder:"e.g. Build Sales Page"},
+        {key:"subtask",  label:"Subtask / Step",     val:"", placeholder:"e.g. Write headline"},
+        {key:"due",      label:"Due Date",            val:"", type:"date"},
+        {key:"priority", label:"Priority", type:"select", val:"HIGH",
+          options:[{val:"HIGH",label:"HIGH"},{val:"MEDIUM",label:"MEDIUM"},{val:"LOW",label:"LOW"}]},
+        {key:"estHours", label:"Estimated Hours",    val:"1", type:"number"},
+      ], vals => {
+        if(!S.projectTasks) S.projectTasks=[];
+        S.projectTasks.push({...vals, projectId:window._projSel, status:"Not Started", actHours:0, notes:""});
+      }); break;
+
+    case "add-subtask":
+      openModal(`Add Subtask to "${el.dataset.maintask}"`,[
+        {key:"subtask",  label:"Subtask / Step",  val:"", placeholder:"What's the next small step?"},
+        {key:"due",      label:"Due Date",          val:"", type:"date"},
+        {key:"priority", label:"Priority", type:"select", val:"MEDIUM",
+          options:[{val:"HIGH",label:"HIGH"},{val:"MEDIUM",label:"MEDIUM"},{val:"LOW",label:"LOW"}]},
+        {key:"estHours", label:"Estimated Hours",  val:"1", type:"number"},
+      ], vals => {
+        if(!S.projectTasks) S.projectTasks=[];
+        S.projectTasks.push({...vals, projectId:window._projSel, mainTask:el.dataset.maintask, status:"Not Started", actHours:0, notes:""});
+      }); break;
+
+    case "edit-task": {
+      const tidx = parseInt(el.dataset.taskidx);
+      const t = S.projectTasks[tidx];
+      openModal("Edit Task",[
+        {key:"mainTask", label:"Main Task",   val:t.mainTask},
+        {key:"subtask",  label:"Subtask",     val:t.subtask},
+        {key:"due",      label:"Due Date",    val:t.due||"", type:"date"},
+        {key:"priority", label:"Priority", type:"select", val:t.priority||"MEDIUM",
+          options:[{val:"HIGH",label:"HIGH"},{val:"MEDIUM",label:"MEDIUM"},{val:"LOW",label:"LOW"}]},
+        {key:"status",   label:"Status", type:"select", val:t.status,
+          options:["Not Started","In Progress","Waiting","Completed","On Hold"].map(v=>({val:v,label:v}))},
+        {key:"estHours", label:"Est Hours",  val:t.estHours||1, type:"number"},
+        {key:"actHours", label:"Actual Hours",val:t.actHours||0, type:"number"},
+      ], vals => { Object.assign(S.projectTasks[tidx], vals); }); break;
+    }
+
+    case "toggle-task": {
+      const tidx = parseInt(el.dataset.taskidx);
+      const cur = S.projectTasks[tidx].status;
+      S.projectTasks[tidx].status = cur==="Completed" ? "In Progress" : "Completed";
+      save(); render(); break;
+    }
+
+    case "delete-task": {
+      const tidx = parseInt(el.dataset.taskidx);
+      if(confirm("Delete this task?")){ S.projectTasks.splice(tidx,1); save(); render(); } break;
+    }
+
     case "add-parenting":
       openModal("Add Connection Task",[
         {key:"task",label:"Task",val:"",placeholder:"e.g. Call Sage, Plan trip together"},
@@ -2572,6 +2886,7 @@ const TAB_GROUPS = {
     {id:"debt",        icon:"📉", label:"Debt"},
     {id:"savings",     icon:"💰", label:"Savings"},
     {id:"appointments",icon:"📅", label:"Appts"},
+    {id:"projects",    icon:"🏗️", label:"Projects"},
   ],
   grow: [
     {id:"mission",     icon:"🌟", label:"Mission"},
