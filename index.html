@@ -577,6 +577,14 @@ const DEFAULTS = {
   resources:[],
   affIdx:0,
   lastReset:"",
+  expenses:[],
+  netWorthAssets:[
+    {name:"Checking Account", value:0, category:"Cash"},
+    {name:"Savings Account",  value:0, category:"Cash"},
+    {name:"Investments / IRA",value:0, category:"Investments"},
+    {name:"Car Value",        value:0, category:"Property"},
+  ],
+  netWorthLiabilities:[],
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -1752,6 +1760,416 @@ function renderAnnualRevenue(){
       data-action="edit-revenue-meta">⚙️ Edit tax rate & monthly target</button>
   </div>`;
 }
+
+// ── EXPENSES ──────────────────────────────────────────────────
+function renderExpenses(){
+  const PERSONAL_CATS = ["Bills","Groceries","Entertainment","Dining Out","Self Care","Health Care","Fitness","Clothes","Car Maintenance","Gas","Vacation","Home","Gifts","Guilt Free Spending","Miscellaneous"];
+  const BIZ_CATS      = ["Software","Marketing","Advertising","Education / Training","Contractors","Business Tools","Office Supplies","Equipment","Travel","Website","Subscriptions","Professional Services","Misc Business"];
+  const PAY_METHODS   = ["Credit Card","Debit Card","Cash","Bank Transfer","Business Card","Zelle/Venmo","Auto-Pay","Other"];
+  const FREQS         = ["One-time","Monthly","Quarterly","Yearly"];
+  const ALL_CATS      = [...PERSONAL_CATS,...BIZ_CATS];
+
+  const exps = S.expenses || [];
+  const now  = new Date();
+  const thisMonthKey = `${now.getFullYear()}-${now.getMonth()+1}`;
+
+  // Filter controls
+  const fType = window._expType || "all";
+  const fMonth= window._expMonth || thisMonthKey;
+
+  // Build month options from existing data + current month
+  const monthKeys = [...new Set([thisMonthKey, ...exps.map(e=>e.month||thisMonthKey)])].sort().reverse();
+
+  const filtered = exps.filter(e=>{
+    const matchType  = fType==="all" || e.type===fType;
+    const matchMonth = (e.month||thisMonthKey) === fMonth;
+    return matchType && matchMonth;
+  });
+
+  const totalPersonal = filtered.filter(e=>e.type==="Personal").reduce((a,e)=>a+Number(e.amount),0);
+  const totalBiz      = filtered.filter(e=>e.type==="Business").reduce((a,e)=>a+Number(e.amount),0);
+  const grandTotal    = totalPersonal + totalBiz;
+  const needTotal     = filtered.filter(e=>e.needWant==="Need").reduce((a,e)=>a+Number(e.amount),0);
+  const wantTotal     = filtered.filter(e=>e.needWant==="Want").reduce((a,e)=>a+Number(e.amount),0);
+
+  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function fmtMonth(key){ const [y,m]=key.split("-"); return MONTH_NAMES[parseInt(m)-1]+" "+y; }
+
+  return `
+  ${sectionHdr("💸","Expense Tracker","Every dollar logged. Know exactly where money goes.")}
+
+  <!-- Controls -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+    <select data-action="exp-filter-type" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--gold-soft);font-family:Montserrat,sans-serif;font-size:11px;padding:8px 10px">
+      <option value="all" ${fType==="all"?"selected":""}>All Expenses</option>
+      <option value="Personal" ${fType==="Personal"?"selected":""}>🔵 Personal Only</option>
+      <option value="Business" ${fType==="Business"?"selected":""}>🟢 Business Only</option>
+    </select>
+    <select data-action="exp-filter-month" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--gold-soft);font-family:Montserrat,sans-serif;font-size:11px;padding:8px 10px">
+      ${monthKeys.map(k=>`<option value="${k}" ${k===fMonth?"selected":""}>${fmtMonth(k)}</option>`).join("")}
+    </select>
+  </div>
+
+  <!-- Summary stats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+    ${statCard("Total",fmtD(grandTotal),"this period",C.gold)}
+    ${statCard("Personal",fmtD(totalPersonal),"",C.blue)}
+    ${statCard("Business",fmtD(totalBiz),"",C.green)}
+    ${statCard("Wants",fmtD(wantTotal),"vs "+fmtD(needTotal)+" needs",C.orange)}
+  </div>
+
+  <!-- Expense list -->
+  ${filtered.length===0?`
+    <div class="card" style="text-align:center;padding:32px;border:1px dashed rgba(255,255,255,.1)">
+      <div style="font-size:32px;margin-bottom:8px">💸</div>
+      <div style="font-size:13px;color:var(--gold-soft);font-weight:600;margin-bottom:4px">No expenses logged yet</div>
+      <div style="font-size:11px;color:var(--gray-lt)">Tap + Log Expense to start tracking</div>
+    </div>
+  `:`
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:60px 1fr 80px 70px;padding:8px 14px;background:rgba(201,168,76,.08);border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">DATE</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">DESCRIPTION</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">CATEGORY</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px;text-align:right">AMOUNT</span>
+    </div>
+    ${[...filtered].reverse().map((e,ri)=>{
+      const i = exps.indexOf(e);
+      const typeColor = e.type==="Business" ? C.green : C.blue;
+      return `
+      <div style="display:grid;grid-template-columns:60px 1fr 80px 70px;align-items:center;padding:9px 14px;
+        border-bottom:1px solid rgba(255,255,255,.04);gap:4px">
+        <div style="font-size:10px;color:var(--gray-lt)">${e.date||""}</div>
+        <div style="min-width:0">
+          <div style="font-size:12px;color:var(--gold-soft);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description||e.category}</div>
+          <div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">
+            <span style="font-size:9px;padding:1px 5px;border-radius:6px;background:${typeColor}22;color:${typeColor};font-weight:700">${e.type}</span>
+            ${e.needWant?`<span style="font-size:9px;padding:1px 5px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--gray-lt)">${e.needWant}</span>`:""}
+            ${e.freq&&e.freq!=="One-time"?`<span style="font-size:9px;padding:1px 5px;border-radius:6px;background:rgba(245,158,11,.1);color:${C.orange}">${e.freq}</span>`:""}
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--gray-lt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.category||""}</div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <span style="font-size:13px;font-weight:700;color:${typeColor}">${fmtD(Number(e.amount))}</span>
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px" data-action="edit-expense" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:${C.red};font-size:12px;cursor:pointer;padding:2px" data-action="delete-expense" data-idx="${i}">✕</button>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`}
+
+  <button class="btn btn-outline btn-block" data-action="add-expense">+ Log Expense</button>`;
+}
+
+// ── SPENDING SUMMARY ──────────────────────────────────────────
+function renderSpending(){
+  const exps = S.expenses || [];
+  const now  = new Date();
+  const curYear  = now.getFullYear();
+  const curMonth = now.getMonth()+1;
+
+  // Group by month
+  function monthExps(year, month){
+    const key = `${year}-${month}`;
+    return exps.filter(e=>(e.month||`${curYear}-${curMonth}`)===key);
+  }
+
+  // Category totals for current month
+  const curExps = monthExps(curYear, curMonth);
+  const catMap  = {};
+  curExps.forEach(e=>{
+    if(!catMap[e.category]) catMap[e.category]={personal:0,business:0,need:0,want:0,total:0};
+    catMap[e.category].total += Number(e.amount);
+    if(e.type==="Personal") catMap[e.category].personal += Number(e.amount);
+    else catMap[e.category].business += Number(e.amount);
+    if(e.needWant==="Need") catMap[e.category].need += Number(e.amount);
+    else catMap[e.category].want += Number(e.amount);
+  });
+  const catEntries = Object.entries(catMap).sort((a,b)=>b[1].total-a[1].total);
+
+  // Monthly totals for last 6 months
+  const monthlyData = [];
+  for(let i=5;i>=0;i--){
+    let m = curMonth-i; let y = curYear;
+    if(m<=0){m+=12;y--;}
+    const me = monthExps(y,m);
+    const personal = me.filter(e=>e.type==="Personal").reduce((a,e)=>a+Number(e.amount),0);
+    const business = me.filter(e=>e.type==="Business").reduce((a,e)=>a+Number(e.amount),0);
+    const MNAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    monthlyData.push({label:MNAMES[m-1],personal,business,total:personal+business,isCurrent:i===0});
+  }
+
+  const totalNeed = curExps.filter(e=>e.needWant==="Need").reduce((a,e)=>a+Number(e.amount),0);
+  const totalWant = curExps.filter(e=>e.needWant==="Want").reduce((a,e)=>a+Number(e.amount),0);
+  const totalCur  = totalNeed+totalWant;
+  const maxBar = Math.max(...monthlyData.map(m=>m.total),1);
+
+  return `
+  ${sectionHdr("📊","Spending Summary","Where does your money actually go?")}
+
+  <!-- 6-month bar chart -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:14px">6-Month Spending</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;align-items:end;height:80px">
+      ${monthlyData.map(m=>{
+        const h = Math.max(4,Math.round((m.total/maxBar)*72));
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="width:100%;border-radius:3px 3px 0 0;height:${h}px;
+            background:${m.isCurrent?C.gold:"rgba(201,168,76,.35)"};
+            ${m.isCurrent?"box-shadow:0 0 6px "+C.gold+"66":""}"></div>
+          <div style="font-size:8px;color:${m.isCurrent?"var(--gold)":"var(--gray-lt)"};font-weight:${m.isCurrent?700:400}">${m.label}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>
+
+  <!-- Need vs Want -->
+  ${totalCur>0?`
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <div class="card-title" style="margin:0">Need vs Want</div>
+      <div style="font-size:11px;color:var(--gray-lt)">${fmtD(totalCur)} total</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+      <div>
+        <div style="font-size:9px;color:var(--gold-dk);margin-bottom:4px">NEEDS ${(pct(totalNeed,totalCur)).toFixed(0)}%</div>
+        ${bar(pct(totalNeed,totalCur),C.blue,8)}
+        <div style="font-size:11px;font-weight:700;color:${C.blue};margin-top:4px">${fmtD(totalNeed)}</div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--gold-dk);margin-bottom:4px">WANTS ${(pct(totalWant,totalCur)).toFixed(0)}%</div>
+        ${bar(pct(totalWant,totalCur),C.orange,8)}
+        <div style="font-size:11px;font-weight:700;color:${C.orange};margin-top:4px">${fmtD(totalWant)}</div>
+      </div>
+    </div>
+  </div>`:""}
+
+  <!-- Category breakdown -->
+  ${catEntries.length===0?`
+    <div class="card" style="text-align:center;padding:24px;border:1px dashed rgba(255,255,255,.1)">
+      <div style="font-size:12px;color:var(--gray-lt)">No expenses this month. Log some in the 💸 Expenses tab.</div>
+    </div>
+  `:`
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="display:grid;grid-template-columns:1fr 80px 80px 80px;padding:8px 14px;
+      background:rgba(201,168,76,.08);border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">CATEGORY</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px;text-align:right">MONTHLY</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px;text-align:right">ANNUAL*</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px;text-align:right">TYPE</span>
+    </div>
+    ${catEntries.map(([cat,vals])=>{
+      const pctOfTotal = pct(vals.total, totalCur);
+      const typeColor  = vals.business>vals.personal ? C.green : C.blue;
+      const typeLabel  = vals.business>vals.personal ? "Biz" : "Personal";
+      return `
+      <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div style="display:grid;grid-template-columns:1fr 80px 80px 80px;align-items:center;margin-bottom:5px">
+          <span style="font-size:12px;font-weight:600;color:var(--gold-soft)">${cat}</span>
+          <span style="font-size:12px;font-weight:700;color:${C.gold};text-align:right">${fmtD(vals.total)}</span>
+          <span style="font-size:11px;color:var(--gray-lt);text-align:right">${fmtD(vals.total*12)}</span>
+          <span style="font-size:9px;padding:2px 6px;border-radius:6px;background:${typeColor}22;color:${typeColor};font-weight:700;text-align:center;margin-left:auto">${typeLabel}</span>
+        </div>
+        ${bar(pctOfTotal,C.gold,5)}
+      </div>`;
+    }).join("")}
+    <div style="padding:8px 14px;background:rgba(201,168,76,.06)">
+      <div style="font-size:9px;color:var(--gray-lt);font-style:italic">*Annual = monthly × 12 projection</div>
+    </div>
+  </div>`}`;
+}
+
+// ── CASH FLOW ─────────────────────────────────────────────────
+function renderCashFlow(){
+  const now       = new Date();
+  const curYear   = now.getFullYear();
+  const curMonth  = now.getMonth()+1;
+  const MNAMES    = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const MSHORT    = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // Build 6 months of data
+  const months = [];
+  for(let i=5;i>=0;i--){
+    let m=curMonth-i; let y=curYear;
+    if(m<=0){m+=12;y--;}
+    const key=`${y}-${m}`;
+
+    // Income: from annualRevData or current monthly revenue
+    const monthlyRevenue = S.revenue.reduce((a,r)=>a+(Number(r.price)*Number(r.current)),0);
+    const income = (S.annualRevData&&S.annualRevData[m-1]!==undefined) ? Number(S.annualRevData[m-1]) : (i===0?monthlyRevenue:0);
+
+    // Bills: personal + biz monthly (non-yearly)
+    const bills = [
+      ...(S.personalBills||[]).filter(b=>b.freq!=="Yearly"),
+      ...(S.bizBills||[]).filter(b=>b.freq!=="Yearly")
+    ].reduce((a,b)=>a+Number(b.amount),0);
+
+    // Expenses logged for this month
+    const expenses = (S.expenses||[]).filter(e=>(e.month||`${curYear}-${curMonth}`)===key).reduce((a,e)=>a+Number(e.amount),0);
+
+    const net = income - bills - expenses;
+    months.push({label:MSHORT[m-1],fullLabel:MNAMES[m-1],income,bills,expenses,net,isCurrent:i===0,key});
+  }
+
+  const curData   = months[months.length-1];
+  const maxVal    = Math.max(...months.map(m=>Math.max(m.income,m.bills+m.expenses)),1);
+  const totalNetYTD = months.filter(m=>m.income>0||m.expenses>0).reduce((a,m)=>a+m.net,0);
+
+  return `
+  ${sectionHdr("💵","Cash Flow","Income minus bills minus expenses. Your real number.")}
+
+  <!-- Current month summary -->
+  <div class="card" style="border-top:3px solid ${curData.net>=0?C.green:C.red};margin-bottom:10px;text-align:center">
+    <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">${curData.fullLabel.toUpperCase()} NET CASH FLOW</div>
+    <div style="font-size:44px;font-weight:700;color:${curData.net>=0?C.green:C.red};font-family:'Cormorant Garamond',serif">
+      ${curData.net>=0?"":"-"}${fmtD(Math.abs(Math.round(curData.net)))}
+    </div>
+    <div style="font-size:10px;color:var(--gray-lt);margin-top:4px">${curData.net>=0?"🟢 Positive cash flow this month":"🔴 Spending exceeds income this month"}</div>
+  </div>
+
+  <!-- 3-column breakdown -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+    ${statCard("Income",fmtD(Math.round(curData.income)),"this month",C.green)}
+    ${statCard("Bills",fmtD(Math.round(curData.bills)),"recurring",C.red)}
+    ${statCard("Expenses",fmtD(Math.round(curData.expenses)),"logged",C.orange)}
+  </div>
+
+  <!-- YTD net -->
+  <div class="card" style="margin-bottom:10px;border-left:4px solid ${totalNetYTD>=0?C.green:C.red}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--gold)">Year-to-Date Net</div>
+        <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">Sum of all months with data</div>
+      </div>
+      <div style="font-size:24px;font-weight:700;color:${totalNetYTD>=0?C.green:C.red};font-family:'Cormorant Garamond',serif">
+        ${totalNetYTD>=0?"":"-"}${fmtD(Math.abs(Math.round(totalNetYTD)))}
+      </div>
+    </div>
+  </div>
+
+  <!-- 6-month table -->
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:50px 2fr 2fr 2fr 2fr;padding:8px 14px;
+      background:rgba(201,168,76,.08);border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk)">MO</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);text-align:right">INCOME</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);text-align:right">BILLS</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);text-align:right">EXPENSES</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);text-align:right">NET</span>
+    </div>
+    ${months.map(m=>`
+      <div style="display:grid;grid-template-columns:50px 2fr 2fr 2fr 2fr;padding:9px 14px;
+        border-bottom:1px solid rgba(255,255,255,.04);
+        background:${m.isCurrent?"rgba(201,168,76,.05)":"transparent"}">
+        <span style="font-size:11px;font-weight:${m.isCurrent?700:400};color:${m.isCurrent?"var(--gold)":"var(--gold-soft)"}">${m.label}${m.isCurrent?" ●":""}</span>
+        <span style="font-size:11px;color:${C.green};text-align:right;font-weight:600">${m.income>0?fmtD(Math.round(m.income)):"—"}</span>
+        <span style="font-size:11px;color:${C.red};text-align:right">${m.bills>0?fmtD(Math.round(m.bills)):"—"}</span>
+        <span style="font-size:11px;color:${C.orange};text-align:right">${m.expenses>0?fmtD(Math.round(m.expenses)):"—"}</span>
+        <span style="font-size:11px;font-weight:700;color:${m.net===0?"var(--gray-lt)":m.net>0?C.green:C.red};text-align:right">
+          ${m.net===0&&m.income===0?"—":(m.net>=0?"+":"-")+fmtD(Math.abs(Math.round(m.net)))}</span>
+      </div>`).join("")}
+  </div>
+
+  <div style="font-size:10px;color:var(--gold-dk);font-style:italic;text-align:center;padding:4px 0">
+    Income pulls from your Revenue tab. Add expenses in 💸 Expenses to make this accurate.
+  </div>`;
+}
+
+// ── NET WORTH ─────────────────────────────────────────────────
+function renderNetWorth(){
+  const assets = S.netWorthAssets || [];
+  const liabs  = S.netWorthLiabilities || [];
+
+  // Also include savings goals as assets and debts as liabilities
+  const savingsAssets = (S.savings||[]).map(s=>({name:s.name,value:Number(s.saved),category:"Savings",_auto:true}));
+  const debtLiabs     = (S.debts||[]).map(d=>({name:d.name,balance:Number(d.balance),_auto:true}));
+
+  const allAssets = [...assets,...savingsAssets];
+  const allLiabs  = [...liabs,...debtLiabs];
+
+  const totalAssets = allAssets.reduce((a,x)=>a+Number(x.value||0),0);
+  const totalLiabs  = allLiabs.reduce((a,x)=>a+Number(x.balance||0),0);
+  const netWorth    = totalAssets - totalLiabs;
+
+  // Asset categories
+  const assetCats = {};
+  allAssets.forEach(a=>{
+    const cat = a.category||"Other";
+    if(!assetCats[cat]) assetCats[cat]=[];
+    assetCats[cat].push(a);
+  });
+
+  return `
+  ${sectionHdr("🏦","Net Worth","Assets minus liabilities. Your real wealth number.")}
+
+  <!-- Big number -->
+  <div class="card" style="text-align:center;border-top:3px solid ${netWorth>=0?C.gold:C.red};margin-bottom:10px">
+    <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">NET WORTH</div>
+    <div style="font-size:48px;font-weight:700;color:${netWorth>=0?C.gold:C.red};font-family:'Cormorant Garamond',serif">
+      ${netWorth>=0?"":"-"}${fmtD(Math.abs(Math.round(netWorth)))}
+    </div>
+    <div style="display:flex;justify-content:center;gap:24px;margin-top:8px">
+      <div style="text-align:center">
+        <div style="font-size:9px;color:var(--gold-dk)">ASSETS</div>
+        <div style="font-size:18px;font-weight:700;color:${C.green}">${fmtD(Math.round(totalAssets))}</div>
+      </div>
+      <div style="font-size:24px;color:var(--gray-lt);line-height:1.8">−</div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:var(--gold-dk)">LIABILITIES</div>
+        <div style="font-size:18px;font-weight:700;color:${C.red}">${fmtD(Math.round(totalLiabs))}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assets -->
+  <div style="font-size:10px;color:var(--gold-dk);font-weight:700;letter-spacing:2px;padding:8px 0 4px">ASSETS</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+    ${Object.entries(assetCats).map(([cat,items])=>`
+      <div style="padding:6px 14px 2px;background:rgba(16,185,129,.04);border-bottom:1px solid rgba(255,255,255,.04)">
+        <div style="font-size:9px;color:${C.green};font-weight:700;letter-spacing:1px">${cat.toUpperCase()}</div>
+      </div>
+      ${items.map((a,i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04)">
+          <div>
+            <div style="font-size:12px;color:var(--gold-soft);font-weight:600">${a.name}</div>
+            ${a._auto?`<div style="font-size:9px;color:var(--gray-lt)">from Savings tab</div>`:""}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;font-weight:700;color:${C.green}">${fmtD(Number(a.value||0))}</span>
+            ${!a._auto?`<button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer" data-action="edit-asset" data-idx="${assets.indexOf(a)}">✏️</button>
+            <button style="background:none;border:none;color:${C.red};font-size:12px;cursor:pointer" data-action="delete-asset" data-idx="${assets.indexOf(a)}">✕</button>`:""}
+          </div>
+        </div>`).join("")}
+    `).join("")}
+    ${assets.length===0&&savingsAssets.length===0?`<div style="padding:20px;text-align:center;color:var(--gray-lt);font-size:12px">No assets added yet</div>`:""}
+  </div>
+  <button class="btn btn-outline btn-block" style="margin-bottom:14px" data-action="add-asset">+ Add Asset</button>
+
+  <!-- Liabilities -->
+  <div style="font-size:10px;color:var(--gold-dk);font-weight:700;letter-spacing:2px;padding:8px 0 4px">LIABILITIES</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+    ${allLiabs.map((l,i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div>
+          <div style="font-size:12px;color:var(--gold-soft);font-weight:600">${l.name}</div>
+          ${l._auto?`<div style="font-size:9px;color:var(--gray-lt)">from Debt tab</div>`:""}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:14px;font-weight:700;color:${C.red}">${fmtD(Number(l.balance||0))}</span>
+          ${!l._auto?`<button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer" data-action="edit-liability" data-idx="${liabs.indexOf(l)}">✏️</button>
+          <button style="background:none;border:none;color:${C.red};font-size:12px;cursor:pointer" data-action="delete-liability" data-idx="${liabs.indexOf(l)}">✕</button>`:""}
+        </div>
+      </div>`).join("")}
+    ${allLiabs.length===0?`<div style="padding:20px;text-align:center;color:var(--gray-lt);font-size:12px">No liabilities added. Debts pull automatically from your Debt tab.</div>`:""}
+  </div>
+  <button class="btn btn-outline btn-block" data-action="add-liability">+ Add Liability</button>
+
+  <div style="font-size:10px;color:var(--gold-dk);font-style:italic;text-align:center;padding:12px 0 4px">
+    Savings goals and debts sync automatically from your Savings and Debt tabs.
+  </div>`;
+}
+
+
 function renderMarketing(){
   const done = S.marketing.filter(m=>m.done).length;
   const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -2495,6 +2913,10 @@ const RENDERS = {
   marketing:    renderMarketing,
   appointments: renderAppointments,
   projects:     renderProjects,
+  expenses:     renderExpenses,
+  spending:     renderSpending,
+  cashflow:     renderCashFlow,
+  networth:     renderNetWorth,
   affirmations: renderAffirmations,
   mission:      renderMission,
   vision:       renderVisionBoard,
@@ -2644,7 +3066,211 @@ function handleClick(e){
     case "delete-biz-bill":
       if(confirm(`Delete "${S.bizBills[idx].name}"?`)){ S.bizBills.splice(idx,1); save(); render(); } break;
 
-    case "toggle-meditation":
+    // ── EXPENSE HANDLERS ───────────────────────────────────
+    case "exp-filter-type":
+    case "exp-filter-month":
+      break; // handled in handleInput
+
+    case "add-expense":{
+      const now = new Date();
+      const mo = String(now.getMonth()+1).padStart(2,"0");
+      const dy = String(now.getDate()).padStart(2,"0");
+      const PERSONAL_CATS = ["Bills","Groceries","Entertainment","Dining Out","Self Care","Health Care","Fitness","Clothes","Car Maintenance","Gas","Vacation","Home","Gifts","Guilt Free Spending","Miscellaneous"];
+      const BIZ_CATS      = ["Software","Marketing","Advertising","Education / Training","Contractors","Business Tools","Office Supplies","Equipment","Travel","Website","Subscriptions","Professional Services","Misc Business"];
+      const PAY_METHODS   = ["Credit Card","Debit Card","Cash","Bank Transfer","Business Card","Zelle/Venmo","Auto-Pay","Other"];
+      const curMonthKey   = `${now.getFullYear()}-${now.getMonth()+1}`;
+      openModal(`
+        <h3 style="color:var(--gold);margin:0 0 16px">💸 Log Expense</h3>
+        <label class="lbl">Date</label>
+        <input id="m-date" class="inp" type="date" value="${now.getFullYear()}-${mo}-${dy}">
+        <label class="lbl">Type</label>
+        <select id="m-type" class="inp">
+          <option value="Personal">🔵 Personal</option>
+          <option value="Business">🟢 Business</option>
+        </select>
+        <label class="lbl">Category</label>
+        <select id="m-cat" class="inp">
+          <optgroup label="Personal">
+            ${PERSONAL_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}
+          </optgroup>
+          <optgroup label="Business">
+            ${BIZ_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}
+          </optgroup>
+        </select>
+        <label class="lbl">Description</label>
+        <input id="m-desc" class="inp" placeholder="e.g. Whole Foods, Canva subscription…">
+        <label class="lbl">Amount ($)</label>
+        <input id="m-amt" class="inp" type="number" min="0" step="0.01" placeholder="0.00">
+        <label class="lbl">Payment Method</label>
+        <select id="m-pay" class="inp">
+          ${PAY_METHODS.map(p=>`<option value="${p}">${p}</option>`).join("")}
+        </select>
+        <label class="lbl">Frequency</label>
+        <select id="m-freq" class="inp">
+          <option value="One-time">One-time</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <label class="lbl">Need or Want?</label>
+        <select id="m-nw" class="inp">
+          <option value="Need">Need</option>
+          <option value="Want">Want</option>
+        </select>
+        <label class="lbl">Notes (optional)</label>
+        <input id="m-notes" class="inp" placeholder="Optional notes">
+        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
+          const d=g('m-date').value, t=g('m-type').value, cat=g('m-cat').value,
+                desc=g('m-desc').value.trim(), amt=parseFloat(g('m-amt').value)||0,
+                pay=g('m-pay').value, freq=g('m-freq').value, nw=g('m-nw').value,
+                notes=g('m-notes').value.trim();
+          if(!amt){alert('Please enter an amount');return;}
+          const dateParts = d.split('-');
+          const monthKey = dateParts[0]+'-'+parseInt(dateParts[1]);
+          const displayDate = (dateParts[1]||mo)+'/'+(dateParts[2]||dy);
+          S.expenses.push({date:displayDate,month:monthKey,type:t,category:cat,description:desc,amount:amt,payMethod:pay,freq,needWant:nw,notes});
+          save(); closeModal(); render();
+        ">Log Expense</button>
+      `); break;}
+
+    case "edit-expense":{
+      const e = S.expenses[idx];
+      if(!e) break;
+      const PERSONAL_CATS = ["Bills","Groceries","Entertainment","Dining Out","Self Care","Health Care","Fitness","Clothes","Car Maintenance","Gas","Vacation","Home","Gifts","Guilt Free Spending","Miscellaneous"];
+      const BIZ_CATS      = ["Software","Marketing","Advertising","Education / Training","Contractors","Business Tools","Office Supplies","Equipment","Travel","Website","Subscriptions","Professional Services","Misc Business"];
+      const PAY_METHODS   = ["Credit Card","Debit Card","Cash","Bank Transfer","Business Card","Zelle/Venmo","Auto-Pay","Other"];
+      openModal(`
+        <h3 style="color:var(--gold);margin:0 0 16px">✏️ Edit Expense</h3>
+        <label class="lbl">Type</label>
+        <select id="m-type" class="inp">
+          <option value="Personal" ${e.type==="Personal"?"selected":""}>🔵 Personal</option>
+          <option value="Business" ${e.type==="Business"?"selected":""}>🟢 Business</option>
+        </select>
+        <label class="lbl">Category</label>
+        <select id="m-cat" class="inp">
+          <optgroup label="Personal">
+            ${PERSONAL_CATS.map(c=>`<option value="${c}" ${c===e.category?"selected":""}>${c}</option>`).join("")}
+          </optgroup>
+          <optgroup label="Business">
+            ${BIZ_CATS.map(c=>`<option value="${c}" ${c===e.category?"selected":""}>${c}</option>`).join("")}
+          </optgroup>
+        </select>
+        <label class="lbl">Description</label>
+        <input id="m-desc" class="inp" value="${e.description||""}">
+        <label class="lbl">Amount ($)</label>
+        <input id="m-amt" class="inp" type="number" min="0" step="0.01" value="${e.amount||0}">
+        <label class="lbl">Payment Method</label>
+        <select id="m-pay" class="inp">
+          ${PAY_METHODS.map(p=>`<option value="${p}" ${p===e.payMethod?"selected":""}>${p}</option>`).join("")}
+        </select>
+        <label class="lbl">Frequency</label>
+        <select id="m-freq" class="inp">
+          ${["One-time","Monthly","Quarterly","Yearly"].map(f=>`<option value="${f}" ${f===e.freq?"selected":""}>${f}</option>`).join("")}
+        </select>
+        <label class="lbl">Need or Want?</label>
+        <select id="m-nw" class="inp">
+          <option value="Need" ${e.needWant==="Need"?"selected":""}>Need</option>
+          <option value="Want" ${e.needWant==="Want"?"selected":""}>Want</option>
+        </select>
+        <label class="lbl">Notes</label>
+        <input id="m-notes" class="inp" value="${e.notes||""}">
+        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
+          S.expenses[${idx}].type=g('m-type').value;
+          S.expenses[${idx}].category=g('m-cat').value;
+          S.expenses[${idx}].description=g('m-desc').value.trim();
+          S.expenses[${idx}].amount=parseFloat(g('m-amt').value)||0;
+          S.expenses[${idx}].payMethod=g('m-pay').value;
+          S.expenses[${idx}].freq=g('m-freq').value;
+          S.expenses[${idx}].needWant=g('m-nw').value;
+          S.expenses[${idx}].notes=g('m-notes').value.trim();
+          save(); closeModal(); render();
+        ">Save Changes</button>
+      `); break;}
+
+    case "delete-expense":
+      if(confirm("Delete this expense?")){ S.expenses.splice(idx,1); save(); render(); } break;
+
+    // ── NET WORTH HANDLERS ──────────────────────────────────
+    case "add-asset":
+      openModal(`
+        <h3 style="color:var(--gold);margin:0 0 16px">🏦 Add Asset</h3>
+        <label class="lbl">Asset Name</label>
+        <input id="m-name" class="inp" placeholder="e.g. Savings Account, Car, Property">
+        <label class="lbl">Category</label>
+        <select id="m-cat" class="inp">
+          ${["Cash","Savings","Investments","Property","Retirement","Business","Other"].map(c=>`<option value="${c}">${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Current Value ($)</label>
+        <input id="m-val" class="inp" type="number" min="0" step="1" placeholder="0">
+        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
+          const name=g('m-name').value.trim(), cat=g('m-cat').value, val=parseFloat(g('m-val').value)||0;
+          if(!name){alert('Please enter a name');return;}
+          if(!S.netWorthAssets) S.netWorthAssets=[];
+          S.netWorthAssets.push({name,category:cat,value:val});
+          save(); closeModal(); render();
+        ">Add Asset</button>
+      `); break;
+
+    case "edit-asset":{
+      const a = S.netWorthAssets[idx];
+      if(!a) break;
+      openModal(`
+        <h3 style="color:var(--gold);margin:0 0 16px">✏️ Edit Asset</h3>
+        <label class="lbl">Asset Name</label>
+        <input id="m-name" class="inp" value="${a.name||""}">
+        <label class="lbl">Category</label>
+        <select id="m-cat" class="inp">
+          ${["Cash","Savings","Investments","Property","Retirement","Business","Other"].map(c=>`<option value="${c}" ${c===a.category?"selected":""}>${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Current Value ($)</label>
+        <input id="m-val" class="inp" type="number" min="0" step="1" value="${a.value||0}">
+        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
+          S.netWorthAssets[${idx}].name=g('m-name').value.trim();
+          S.netWorthAssets[${idx}].category=g('m-cat').value;
+          S.netWorthAssets[${idx}].value=parseFloat(g('m-val').value)||0;
+          save(); closeModal(); render();
+        ">Save</button>
+      `); break;}
+
+    case "delete-asset":
+      if(confirm("Remove this asset?")){ S.netWorthAssets.splice(idx,1); save(); render(); } break;
+
+    case "add-liability":
+      openModal(`
+        <h3 style="color:var(--gold);margin:0 0 16px">➕ Add Liability</h3>
+        <label class="lbl">Name</label>
+        <input id="m-name" class="inp" placeholder="e.g. Credit Card, Student Loan">
+        <label class="lbl">Current Balance ($)</label>
+        <input id="m-bal" class="inp" type="number" min="0" step="1" placeholder="0">
+        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
+          const name=g('m-name').value.trim(), bal=parseFloat(g('m-bal').value)||0;
+          if(!name){alert('Please enter a name');return;}
+          if(!S.netWorthLiabilities) S.netWorthLiabilities=[];
+          S.netWorthLiabilities.push({name,balance:bal});
+          save(); closeModal(); render();
+        ">Add Liability</button>
+      `); break;
+
+    case "edit-liability":{
+      const l = S.netWorthLiabilities[idx];
+      if(!l) break;
+      openModal(`
+        <h3 style="color:var(--gold);margin:0 0 16px">✏️ Edit Liability</h3>
+        <label class="lbl">Name</label>
+        <input id="m-name" class="inp" value="${l.name||""}">
+        <label class="lbl">Current Balance ($)</label>
+        <input id="m-bal" class="inp" type="number" min="0" step="1" value="${l.balance||0}">
+        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
+          S.netWorthLiabilities[${idx}].name=g('m-name').value.trim();
+          S.netWorthLiabilities[${idx}].balance=parseFloat(g('m-bal').value)||0;
+          save(); closeModal(); render();
+        ">Save</button>
+      `); break;}
+
+    case "delete-liability":
+      if(confirm("Remove this liability?")){ S.netWorthLiabilities.splice(idx,1); save(); render(); } break;
+
+
       S.meditation[idx].done = !S.meditation[idx].done;
       save(); render(); break;
 
@@ -3223,6 +3849,12 @@ function handleInput(e){
   if(!action) return;
 
   switch(action){
+    case "exp-filter-type":
+      window._expType = el.value;
+      render(); break;
+    case "exp-filter-month":
+      window._expMonth = el.value;
+      render(); break;
     case "meal-input": {
       const day = parseInt(el.dataset.day);
       const meal = el.dataset.meal;
@@ -3301,6 +3933,10 @@ const TAB_GROUPS = {
     {id:"savings",     icon:"💰", label:"Savings"},
     {id:"appointments",icon:"📅", label:"Appts"},
     {id:"projects",    icon:"🏗️", label:"Projects"},
+    {id:"expenses",    icon:"💸", label:"Expenses"},
+    {id:"spending",    icon:"📊", label:"Spending"},
+    {id:"cashflow",    icon:"💵", label:"Cash Flow"},
+    {id:"networth",    icon:"🏦", label:"Net Worth"},
   ],
   grow: [
     {id:"mission",     icon:"🌟", label:"Mission"},
