@@ -1643,7 +1643,178 @@ function renderRevenue(){
   <button class="btn btn-outline btn-block" data-action="add-revenue">+ Add Income Stream</button>`;
 }
 
-// ── MARKETING ────────────────────────────────────────────────
+// ── ANNUAL REVENUE ────────────────────────────────────────────
+function renderAnnualRevenue(){
+  const meta = S.revenueMeta || {taxRate:25, targetMonthly:50000};
+  const taxRate = Number(meta.taxRate)||25;
+  const targetMonthly = Number(meta.targetMonthly)||50000;
+  const targetAnnual = targetMonthly * 12;
+
+  // Monthly actuals per stream
+  const monthlyGross = S.revenue.reduce((a,r)=>a+(Number(r.price)*Number(r.current)),0);
+  const annualGross  = monthlyGross * 12;
+  const annualAfterTax = annualGross * (1 - taxRate/100);
+
+  // Projected annual per stream (current pace * 12)
+  // Per-month target revenue
+  const targetStreamAnnual = S.revenue.reduce((a,r)=>a+(Number(r.price)*Number(r.target)*12),0);
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const curMonth = new Date().getMonth(); // 0-indexed
+
+  // Build monthly projection data — actuals for past months (estimated at current pace), current month actuals
+  // Store per-month overrides in S.annualRevData if user sets them
+  if(!S.annualRevData) S.annualRevData = {};
+  const annualRevData = S.annualRevData;
+
+  // Estimate: use current monthly gross for current month, 0 for future, stored for past
+  function getMonthRevenue(mi){
+    if(annualRevData[mi] !== undefined) return Number(annualRevData[mi]);
+    if(mi === curMonth) return monthlyGross;
+    if(mi < curMonth) return monthlyGross * 0.85; // rough estimate for past
+    return 0; // future months = 0 until entered
+  }
+
+  const monthlyData = MONTHS.map((_,mi)=>({
+    month: MONTHS[mi],
+    revenue: getMonthRevenue(mi),
+    isPast: mi < curMonth,
+    isCurrent: mi === curMonth,
+    isFuture: mi > curMonth,
+  }));
+
+  const ytdGross   = monthlyData.filter(m=>!m.isFuture).reduce((a,m)=>a+m.revenue,0);
+  const ytdAfterTax = ytdGross * (1 - taxRate/100);
+  const ytdTarget  = targetMonthly * (curMonth + 1);
+  const ytdGap     = ytdTarget - ytdGross;
+  const onTrack    = ytdGross >= ytdTarget * 0.85;
+  const maxBarVal  = Math.max(...monthlyData.map(m=>m.revenue), targetMonthly, 1);
+
+  return `
+  ${sectionHdr("📊","Annual Revenue View","Your full year financial picture at a glance.")}
+
+  <!-- Top summary -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div class="card" style="text-align:center;border-top:3px solid ${C.gold};padding:16px 10px">
+      <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">ANNUAL TARGET</div>
+      <div style="font-size:28px;font-weight:700;color:${C.gold};font-family:'Cormorant Garamond',serif">${fmtD(targetAnnual)}</div>
+      <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">${fmtD(targetMonthly)}/mo × 12</div>
+    </div>
+    <div class="card" style="text-align:center;border-top:3px solid ${C.green};padding:16px 10px">
+      <div style="font-size:9px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:4px">PROJ. ANNUAL GROSS</div>
+      <div style="font-size:28px;font-weight:700;color:${C.green};font-family:'Cormorant Garamond',serif">${fmtD(Math.round(annualGross))}</div>
+      <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">~${fmtD(Math.round(annualAfterTax))} after ${taxRate}% tax</div>
+    </div>
+  </div>
+
+  <!-- YTD tracker -->
+  <div class="card" style="margin-bottom:10px;border-left:4px solid ${onTrack?C.green:C.orange}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--gold)">Year-to-Date</div>
+        <div style="font-size:9px;color:var(--gray-lt);margin-top:2px">Through ${MONTHS[curMonth]} · ${onTrack?"🟢 On track":"🟡 Behind pace"}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:22px;font-weight:700;color:${onTrack?C.green:C.orange};font-family:'Cormorant Garamond',serif">${fmtD(Math.round(ytdGross))}</div>
+        <div style="font-size:9px;color:var(--gray-lt)">of ${fmtD(Math.round(ytdTarget))} target</div>
+      </div>
+    </div>
+    ${bar(pct(ytdGross,ytdTarget), onTrack?C.green:C.orange, 10)}
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:9px;color:var(--gray-lt)">After-tax YTD: ~${fmtD(Math.round(ytdAfterTax))}</span>
+      <span style="font-size:9px;color:${ytdGap>0?C.orange:C.green};font-weight:700">${ytdGap>0?"Gap: "+fmtD(Math.round(ytdGap)):"🎉 "+fmtD(Math.round(-ytdGap))+" ahead!"}</span>
+    </div>
+  </div>
+
+  <!-- Monthly bar chart -->
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="card-title" style="margin:0">Monthly Breakdown</div>
+      <div style="font-size:9px;color:var(--gold-dk)">Tap any month to update</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:100px">
+      ${monthlyData.map((m,mi)=>{
+        const h = Math.max(4, Math.round((m.revenue/maxBarVal)*88));
+        const col = m.isFuture ? "rgba(255,255,255,.1)" : m.isCurrent ? C.gold : m.revenue>=targetMonthly ? C.green : C.orange;
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer"
+          data-action="edit-annual-month" data-mi="${mi}" title="${m.month}: ${fmtD(Math.round(m.revenue))}">
+          <div style="width:100%;background:${col};border-radius:3px 3px 0 0;height:${h}px;transition:all .2s;
+            ${m.isCurrent?"box-shadow:0 0 6px "+C.gold+"88":""}"></div>
+          <div style="font-size:7px;color:${m.isCurrent?"var(--gold)":"var(--gray-lt)"};font-weight:${m.isCurrent?700:400}">${m.month}</div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">
+      <span style="font-size:9px;color:var(--gray-lt);display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:${C.green};border-radius:2px;display:inline-block"></span>At/above target</span>
+      <span style="font-size:9px;color:var(--gray-lt);display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:${C.orange};border-radius:2px;display:inline-block"></span>Below target</span>
+      <span style="font-size:9px;color:var(--gray-lt);display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:${C.gold};border-radius:2px;display:inline-block"></span>Current month</span>
+      <span style="font-size:9px;color:var(--gray-lt);display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:rgba(255,255,255,.1);border-radius:2px;display:inline-block"></span>Future</span>
+    </div>
+  </div>
+
+  <!-- Monthly table -->
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1fr;padding:8px 14px;
+      background:rgba(201,168,76,.08);border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">MONTH</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">GROSS</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">AFTER TAX</span>
+      <span style="font-size:9px;font-weight:700;color:var(--gold-dk);letter-spacing:1px">VS TARGET</span>
+    </div>
+    ${monthlyData.map((m,mi)=>{
+      const afterTaxMo = m.revenue*(1-taxRate/100);
+      const vs = m.revenue - targetMonthly;
+      const rowBg = m.isCurrent ? "rgba(201,168,76,.06)" : "transparent";
+      return `
+      <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1fr;padding:9px 14px;
+        border-bottom:1px solid rgba(255,255,255,.04);background:${rowBg};
+        cursor:pointer;transition:background .15s"
+        data-action="edit-annual-month" data-mi="${mi}">
+        <span style="font-size:11px;font-weight:${m.isCurrent?700:400};color:${m.isCurrent?"var(--gold)":m.isFuture?"var(--gray-lt)":"var(--gold-soft)"}">${m.month}${m.isCurrent?" ●":""}</span>
+        <span style="font-size:11px;font-weight:600;color:${m.isFuture?"rgba(255,255,255,.2)":C.gold}">${m.isFuture?"—":fmtD(Math.round(m.revenue))}</span>
+        <span style="font-size:11px;color:${m.isFuture?"rgba(255,255,255,.2)":C.green}">${m.isFuture?"—":fmtD(Math.round(afterTaxMo))}</span>
+        <span style="font-size:10px;font-weight:700;color:${m.isFuture?"rgba(255,255,255,.15)":vs>=0?C.green:C.red}">${m.isFuture?"":vs>=0?"+"+fmtD(Math.round(vs)):"-"+fmtD(Math.round(-vs))}</span>
+      </div>`;
+    }).join("")}
+    <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1fr;padding:10px 14px;
+      background:rgba(201,168,76,.1);border-top:1px solid rgba(201,168,76,.2)">
+      <span style="font-size:11px;font-weight:700;color:var(--gold)">TOTAL YTD</span>
+      <span style="font-size:11px;font-weight:700;color:${C.gold}">${fmtD(Math.round(ytdGross))}</span>
+      <span style="font-size:11px;font-weight:700;color:${C.green}">${fmtD(Math.round(ytdAfterTax))}</span>
+      <span style="font-size:10px;font-weight:700;color:${ytdGap<=0?C.green:C.orange}">${ytdGap<=0?"+"+fmtD(Math.round(-ytdGap)):"-"+fmtD(Math.round(ytdGap))}</span>
+    </div>
+  </div>
+
+  <!-- Per-stream annual breakdown -->
+  <div class="card">
+    <div class="card-title">Income Stream Projections</div>
+    <div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-bottom:12px">Based on your current monthly pace × 12</div>
+    ${S.revenue.map((r,i)=>{
+      const moEarned = Number(r.price)*Number(r.current);
+      const annualEarned = moEarned*12;
+      const annualTarget = Number(r.price)*Number(r.target)*12;
+      const p = pct(annualEarned, annualTarget);
+      return `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:5px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--gold-soft)">${r.icon||"💰"} ${r.product}</div>
+            <div style="font-size:9px;color:var(--gray-lt);margin-top:1px">$${fmt(r.price)}/unit · ${r.current} sales/mo pace</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:16px;font-weight:700;color:${C.gold}">${fmtD(annualEarned)}/yr</div>
+            <div style="font-size:9px;color:var(--gray-lt)">target: ${fmtD(annualTarget)}/yr</div>
+          </div>
+        </div>
+        ${bar(p, p>=100?C.green:C.gold, 7)}
+        <div style="font-size:9px;color:var(--gray-lt);margin-top:3px">${p.toFixed(0)}% of annual target</div>
+      </div>`;}).join("")}
+  </div>
+
+  <div style="text-align:center;padding:8px 0">
+    <button style="background:none;border:none;color:var(--gold-dk);font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif"
+      data-action="edit-revenue-meta">⚙️ Edit tax rate & monthly target</button>
+  </div>`;
+}
 function renderMarketing(){
   const done = S.marketing.filter(m=>m.done).length;
   const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -2383,6 +2554,7 @@ const RENDERS = {
   debt:         renderDebt,
   savings:      renderSavings,
   revenue:      renderRevenue,
+  annualrev:    renderAnnualRevenue,
   marketing:    renderMarketing,
   appointments: renderAppointments,
   projects:     renderProjects,
@@ -2840,6 +3012,20 @@ function handleClick(e){
       ], vals => { Object.assign(S.vision[idx], vals); }); break;
 
     // ── REVENUE META ──
+    case "edit-annual-month": {
+      const mi = parseInt(el.dataset.mi);
+      const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const cur = (S.annualRevData||{})[mi];
+      const monthlyGrossCur = S.revenue.reduce((a,r)=>a+(Number(r.price)*Number(r.current)),0);
+      openModal(`Update ${MONTHS_FULL[mi]} Revenue`,[
+        {key:"revenue", label:`Gross Revenue for ${MONTHS_FULL[mi]} ($)`,
+          val: cur !== undefined ? cur : Math.round(monthlyGrossCur), type:"number", placeholder:"0"},
+      ], vals => {
+        if(!S.annualRevData) S.annualRevData = {};
+        S.annualRevData[mi] = Number(vals.revenue);
+      }); break;
+    }
+
     case "edit-revenue-meta":
       openModal("Revenue Settings",[
         {key:"targetMonthly", label:"Target Monthly Income ($)", val:(S.revenueMeta||{}).targetMonthly||50000, type:"number"},
@@ -3152,6 +3338,7 @@ const TAB_GROUPS = {
   ],
   build: [
     {id:"revenue",     icon:"📈", label:"Revenue"},
+    {id:"annualrev",   icon:"📊", label:"Annual"},
     {id:"marketing",   icon:"📣", label:"Marketing"},
     {id:"bills",       icon:"💳", label:"Bills"},
     {id:"debt",        icon:"📉", label:"Debt"},
