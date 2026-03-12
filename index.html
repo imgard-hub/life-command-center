@@ -397,6 +397,7 @@ textarea{resize:vertical;min-height:70px;}
   <button class="tab-group-btn active" data-group="daily" onclick="switchGroup('daily')">⚡ DAILY</button>
   <button class="tab-group-btn" data-group="build" onclick="switchGroup('build')">💼 BUILD</button>
   <button class="tab-group-btn" data-group="grow" onclick="switchGroup('grow')">🌱 GROW</button>
+  <button class="tab-group-btn" data-group="mind" onclick="switchGroup('mind')">🧠 MIND</button>
 </div>
 
 <!-- TAB BAR -->
@@ -3108,6 +3109,366 @@ function renderFiles(){
   }`;
 }
 
+// ── SECOND BRAIN ───────────────────────────────────────────────
+function renderSecondBrain(){
+  if(!S.secondBrain) S.secondBrain = {view:"capture", capture:[], ideas:[], knowledge:[]};
+  if(!S.secondBrain.view) S.secondBrain.view = "capture";
+  const SB = S.secondBrain;
+  const v = SB.view;
+
+  const NOTE_TYPES = ["Idea","Prayer","Reminder","Reflection","Insight","Lesson Learned"];
+  const NOTE_CATS  = ["Business","Spiritual","Work","Personal","Creative","DBA/Tech","Life","Other"];
+  const IDEA_CATS  = ["Business","Creative","DBA/Tech","Marketing","Product","Personal","Spiritual","Other"];
+  const IDEA_STATUS= ["New","Explore","In Progress","Archived"];
+  const KNOW_CATS  = ["DBA Knowledge","Business Strategy","Writing / Poetry","Spiritual Growth","Life Lessons","Productivity","Other"];
+
+  const TYPE_COLOR = {
+    "Idea":C.gold,"Prayer":C.purple,"Reminder":C.orange,"Reflection":C.blue,
+    "Insight":C.green,"Lesson Learned":C.teal
+  };
+  const STATUS_COLOR = {"New":C.blue,"Explore":C.orange,"In Progress":C.green,"Archived":"rgba(255,255,255,.3)"};
+
+  function viewBtn(id, label, active){
+    return `<button style="flex:1;padding:9px 4px;background:${active?C.gold:"rgba(255,255,255,.04)"};
+      border:1px solid ${active?"transparent":"rgba(255,255,255,.1)"};border-radius:8px;
+      color:${active?"#0D1B2A":"var(--gold-soft)"};font-size:11px;font-weight:700;
+      font-family:Montserrat,sans-serif;cursor:pointer;letter-spacing:.5px"
+      data-action="sb-view" data-view="${id}">${label}</button>`;
+  }
+
+  // ── QUICK CAPTURE view ──
+  if(v === "capture"){
+    return `
+    ${sectionHdr("📝","Second Brain","Your mind, captured. Nothing lost.")}
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      ${viewBtn("capture","📥 Capture",true)}
+      ${viewBtn("ideas","💡 Idea Vault",false)}
+      ${viewBtn("knowledge","🗄️ Knowledge",false)}
+    </div>
+    <button class="btn btn-gold btn-block" style="margin-bottom:14px" data-action="sb-add-capture">+ Capture a Thought</button>
+    ${SB.capture.length===0?`
+      <div class="card" style="text-align:center;padding:36px;border:1px dashed rgba(255,255,255,.1)">
+        <div style="font-size:32px;margin-bottom:10px">🧠</div>
+        <div style="font-size:13px;color:var(--gold-soft);font-weight:600;margin-bottom:4px">Nothing captured yet</div>
+        <div style="font-size:11px;color:var(--gray-lt)">Drop any thought, prayer, idea, or reminder here instantly</div>
+      </div>`:
+      [...SB.capture].reverse().map((n, ri)=>{
+        const i = SB.capture.length - 1 - ri;
+        const tc = TYPE_COLOR[n.type]||C.gold;
+        return `<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid ${tc}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+                <span style="font-size:9px;font-weight:700;color:${tc};letter-spacing:1px;
+                  background:${tc}18;padding:2px 8px;border-radius:12px">${n.type||"Note"}</span>
+                ${n.category?`<span style="font-size:9px;color:var(--gray-lt)">${n.category}</span>`:""}
+                ${n.priority?`<span style="font-size:12px">⭐</span>`:""}
+                <span style="font-size:9px;color:rgba(255,255,255,.2);margin-left:auto">${n.date||""}</span>
+              </div>
+              <div style="font-size:13px;color:var(--gold-soft);line-height:1.5">${n.note||""}</div>
+              ${n.tag?`<div style="font-size:10px;color:${C.teal};margin-top:4px">#${n.tag}</div>`:""}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+                data-action="sb-edit-capture" data-idx="${i}">✏️</button>
+              <button style="background:none;border:none;color:rgba(255,255,255,.2);font-size:11px;cursor:pointer"
+                onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.2)'"
+                data-action="sb-delete-capture" data-idx="${i}">✕</button>
+            </div>
+          </div>
+        </div>`;}).join("")}`;
+  }
+
+  // ── IDEA VAULT view ──
+  if(v === "ideas"){
+    const filterStatus = window._sbIdeaFilter||"all";
+    const filtered = SB.ideas.filter(id=> filterStatus==="all"||id.status===filterStatus);
+    return `
+    ${sectionHdr("💡","Idea Vault","Every spark, captured and organized.")}
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      ${viewBtn("capture","📥 Capture",false)}
+      ${viewBtn("ideas","💡 Idea Vault",true)}
+      ${viewBtn("knowledge","🗄️ Knowledge",false)}
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      ${["all","New","Explore","In Progress","Archived"].map(s=>`
+        <button style="padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;
+          font-family:Montserrat,sans-serif;border:1px solid ${filterStatus===s?C.gold:"rgba(255,255,255,.1)"};
+          background:${filterStatus===s?C.gold+"22":"transparent"};color:${filterStatus===s?C.gold:"var(--gray-lt)"};"
+          data-action="sb-idea-filter" data-val="${s}">${s==="all"?"All ✦":s}</button>`).join("")}
+    </div>
+    <button class="btn btn-gold btn-block" style="margin-bottom:14px" data-action="sb-add-idea">+ Add Idea</button>
+    ${filtered.length===0?`
+      <div class="card" style="text-align:center;padding:36px;border:1px dashed rgba(255,255,255,.1)">
+        <div style="font-size:32px;margin-bottom:10px">💡</div>
+        <div style="font-size:13px;color:var(--gold-soft);font-weight:600">No ideas yet</div>
+      </div>`:
+      filtered.map(idea=>{
+        const i = SB.ideas.indexOf(idea);
+        const sc = STATUS_COLOR[idea.status]||C.blue;
+        return `<div class="card" style="padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+                ${idea.priority?`<span style="font-size:13px">⭐</span>`:""}
+                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px;
+                  background:${sc}18;color:${sc};letter-spacing:1px">${idea.status||"New"}</span>
+                ${idea.category?`<span style="font-size:9px;color:var(--gray-lt)">${idea.category}</span>`:""}
+              </div>
+              <div style="font-size:13px;font-weight:700;color:var(--gold-soft);margin-bottom:4px">${idea.idea||""}</div>
+              ${idea.project?`<div style="font-size:11px;color:${C.teal}">→ ${idea.project}</div>`:""}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">
+              <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+                data-action="sb-edit-idea" data-idx="${i}">✏️</button>
+              <button style="background:none;border:none;color:rgba(255,255,255,.2);font-size:11px;cursor:pointer"
+                onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.2)'"
+                data-action="sb-delete-idea" data-idx="${i}">✕</button>
+            </div>
+          </div>
+        </div>`;}).join("")}`;
+  }
+
+  // ── KNOWLEDGE VAULT view ──
+  const kFilter = window._sbKnowFilter||"all";
+  const kFiltered = SB.knowledge.filter(k=> kFilter==="all"||k.category===kFilter);
+  const kCats = [...new Set(SB.knowledge.map(k=>k.category).filter(Boolean))];
+  return `
+  ${sectionHdr("🗄️","Knowledge Vault","Your personal wisdom library.")}
+  <div style="display:flex;gap:6px;margin-bottom:16px">
+    ${viewBtn("capture","📥 Capture",false)}
+    ${viewBtn("ideas","💡 Idea Vault",false)}
+    ${viewBtn("knowledge","🗄️ Knowledge",true)}
+  </div>
+  ${kCats.length>0?`<div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
+    ${["all",...kCats].map(c=>`
+      <button style="padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;
+        font-family:Montserrat,sans-serif;white-space:nowrap;flex-shrink:0;
+        border:1px solid ${kFilter===c?C.gold:"rgba(255,255,255,.1)"};
+        background:${kFilter===c?C.gold+"22":"transparent"};color:${kFilter===c?C.gold:"var(--gray-lt)"};"
+        data-action="sb-know-filter" data-val="${c}">${c==="all"?"All ✦":c}</button>`).join("")}
+  </div>`:""}
+  <button class="btn btn-gold btn-block" style="margin-bottom:14px" data-action="sb-add-knowledge">+ Add Knowledge</button>
+  ${kFiltered.length===0?`
+    <div class="card" style="text-align:center;padding:36px;border:1px dashed rgba(255,255,255,.1)">
+      <div style="font-size:32px;margin-bottom:10px">🗄️</div>
+      <div style="font-size:13px;color:var(--gold-soft);font-weight:600">Knowledge vault is empty</div>
+      <div style="font-size:11px;color:var(--gray-lt);margin-top:4px">Store insights, lessons, and wisdom here</div>
+    </div>`:
+    kFiltered.map(k=>{
+      const i = SB.knowledge.indexOf(k);
+      return `<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid ${C.teal}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:700;color:var(--gold)">${k.topic||""}</span>
+              ${k.category?`<span style="font-size:9px;color:${C.teal};background:${C.teal}18;
+                padding:2px 8px;border-radius:12px;font-weight:700">${k.category}</span>`:""}
+            </div>
+            <div style="font-size:12px;color:var(--gold-soft);line-height:1.5;margin-bottom:4px">${k.insight||""}</div>
+            ${k.resource?`<div style="font-size:10px;color:var(--gray-lt)">📚 ${k.resource}</div>`:""}
+            ${k.tags?`<div style="font-size:10px;color:${C.blue};margin-top:4px">#${k.tags}</div>`:""}
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">
+            <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+              data-action="sb-edit-knowledge" data-idx="${i}">✏️</button>
+            <button style="background:none;border:none;color:rgba(255,255,255,.2);font-size:11px;cursor:pointer"
+              onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.2)'"
+              data-action="sb-delete-knowledge" data-idx="${i}">✕</button>
+          </div>
+        </div>
+      </div>`;}).join("")}`;
+}
+
+// ── TREE MAGNETIZATION ─────────────────────────────────────────
+function renderTreeMagnet(){
+  if(!S.treeMagnet) S.treeMagnet = {
+    view: "tree",
+    goals: [
+      {
+        id:1, goal:"$50K Monthly Income",
+        roots:["I create real value for my students","I am worthy of financial abundance","My skills and knowledge are highly valuable"],
+        trunk:"Build a $50K/month recurring income through education and consulting",
+        branches:["Kudrant Lab Membership","DBA Accelerator Program","Database Consulting (Rescue+)","Poetry Business"],
+        leaves:["Record SQL lessons weekly","Post marketing content daily","Nurture Kudrant Lab community","Close consulting clients"],
+        fruit:["$50K/month recurring revenue","100+ Kudrant Lab members","Thriving student community","Financial freedom"],
+        energy:[]
+      },
+      {
+        id:2, goal:"Kudrant Lab Growth",
+        roots:["I help DBAs level up their careers","Community builds faster together","My experience is worth sharing"],
+        trunk:"Build the #1 Oracle DBA community and membership platform",
+        branches:["Monthly membership content","Live Q&A sessions","DBA resource library","Student success stories"],
+        leaves:["Create weekly training videos","Host monthly live sessions","Build troubleshooting guides","Engage members daily"],
+        fruit:["Thriving paid community","Recurring monthly income","Student career transformations","Industry authority"],
+        energy:[]
+      },
+      {
+        id:3, goal:"Poetry Business",
+        roots:["My words heal and inspire","Poetry is my soul's language","Creative work has great value"],
+        trunk:"Publish and monetize my poetry collection",
+        branches:["Quantum Awakening","Soul Project","Grief of Her","Future collections"],
+        leaves:["Write new poems weekly","Edit and refine manuscripts","Market poetry on social media","Connect with poetry community"],
+        fruit:["Published poetry books","Loyal reader community","Passive income from books","Artistic legacy"],
+        energy:[]
+      },
+    ],
+    scores: []
+  };
+
+  const TM = S.treeMagnet;
+  const v = TM.view||"tree";
+
+  function viewBtn(id, label, active){
+    return `<button style="flex:1;padding:9px 4px;background:${active?C.green:"rgba(255,255,255,.04)"};
+      border:1px solid ${active?"transparent":"rgba(255,255,255,.1)"};border-radius:8px;
+      color:${active?"#0D1B2A":"var(--gold-soft)"};font-size:11px;font-weight:700;
+      font-family:Montserrat,sans-serif;cursor:pointer"
+      data-action="tm-view" data-view="${id}">${label}</button>`;
+  }
+
+  // ── TREE VISION view ──
+  if(v === "tree"){
+    const sel = window._tmSelGoal !== undefined ? window._tmSelGoal : null;
+    return `
+    ${sectionHdr("🌳","Tree Magnetization","Every goal grows from belief to fruit.")}
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      ${viewBtn("tree","🌳 Tree Vision",true)}
+      ${viewBtn("energy","⚡ Energy Meter",false)}
+    </div>
+    <button class="btn btn-outline btn-block" style="margin-bottom:14px" data-action="tm-add-goal">+ Add Goal Tree</button>
+    ${TM.goals.map((g,gi)=>{
+      const isOpen = sel === gi;
+      const PARTS = [
+        {key:"fruit",    emoji:"🍎", label:"FRUIT — Results",    color:C.orange,  items:g.fruit},
+        {key:"leaves",   emoji:"🌿", label:"LEAVES — Actions",   color:C.green,   items:g.leaves},
+        {key:"branches", emoji:"🌿", label:"BRANCHES — Projects",color:C.teal,    items:g.branches},
+        {key:"trunk",    emoji:"🌳", label:"TRUNK — Core Goal",  color:C.gold,    items:[g.trunk]},
+        {key:"roots",    emoji:"🌱", label:"ROOTS — Beliefs",    color:C.purple,  items:g.roots},
+      ];
+      return `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+          background:rgba(255,255,255,.03)" data-action="tm-toggle-goal" data-idx="${gi}">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--gold)">${g.goal}</div>
+            <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">
+              ${g.branches.length} branches · ${g.leaves.length} actions · ${g.fruit.length} fruits
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button style="background:none;border:none;color:var(--gold-dk);font-size:11px;cursor:pointer"
+              data-action="tm-edit-goal" data-idx="${gi}">✏️</button>
+            <span style="color:var(--gold-dk);font-size:14px;transition:transform .3s;
+              transform:rotate(${isOpen?180:0}deg)">▼</span>
+          </div>
+        </div>
+        ${isOpen ? `
+        <div style="padding:0 14px 14px">
+          ${PARTS.map(p=>`
+            <div style="margin-top:10px">
+              <div style="font-size:9px;font-weight:700;color:${p.color};letter-spacing:2px;
+                margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+                <span>${p.emoji} ${p.label}</span>
+                ${p.key!=="trunk"?`<button style="background:none;border:none;color:${p.color};
+                  font-size:10px;cursor:pointer;font-family:Montserrat,sans-serif"
+                  data-action="tm-add-part" data-gidx="${gi}" data-part="${p.key}">+ Add</button>`:""}
+              </div>
+              <div style="background:${p.color}0d;border:1px solid ${p.color}22;border-radius:8px;padding:10px">
+                ${p.key==="trunk"?`
+                  <div style="font-size:12px;color:var(--gold-soft);font-weight:600;text-align:center">
+                    ${g.trunk||"Set your core goal"}
+                  </div>`:
+                  (p.items||[]).map((item,ii)=>`
+                    <div style="display:flex;align-items:center;gap:8px;padding:3px 0;
+                      border-bottom:1px solid rgba(255,255,255,.04)">
+                      <span style="font-size:10px;color:${p.color};flex-shrink:0">◆</span>
+                      <span style="font-size:12px;color:var(--gold-soft);flex:1">${item}</span>
+                      <button style="background:none;border:none;color:rgba(255,255,255,.15);
+                        font-size:10px;cursor:pointer" data-action="tm-delete-part"
+                        data-gidx="${gi}" data-part="${p.key}" data-pidx="${ii}">✕</button>
+                    </div>`).join("")}
+              </div>
+            </div>`).join("")}
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-outline" style="flex:1;font-size:11px" data-action="tm-view-energy" data-gidx="${gi}">
+              ⚡ Check Energy
+            </button>
+            <button style="flex:1;padding:9px;background:${C.red}18;border:1px solid ${C.red}33;
+              border-radius:8px;color:${C.red};font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif"
+              data-action="tm-delete-goal" data-idx="${gi}">🗑 Remove Tree</button>
+          </div>
+        </div>` : ""}
+      </div>`;}).join("")}`;
+  }
+
+  // ── ENERGY METER view ──
+  const focusGoal = window._tmEnergyGoal !== undefined ? window._tmEnergyGoal : null;
+  const DRIVERS = [
+    {key:"clarity",   label:"Vision Clarity",       desc:"How clear is this goal?",         color:C.blue},
+    {key:"alignment", label:"Emotional Alignment",   desc:"How excited / certain do you feel?",color:C.purple},
+    {key:"momentum",  label:"Action Momentum",       desc:"Are you consistently taking action?",color:C.green},
+    {key:"belief",    label:"Belief Strength",       desc:"Do you truly believe it's possible?",color:C.gold},
+  ];
+
+  return `
+  ${sectionHdr("⚡","Energy Meter","Rate each goal's energetic health. 1 = blocked · 10 = magnetized.")}
+  <div style="display:flex;gap:6px;margin-bottom:16px">
+    ${viewBtn("tree","🌳 Tree Vision",false)}
+    ${viewBtn("energy","⚡ Energy Meter",true)}
+  </div>
+
+  ${TM.goals.map((g,gi)=>{
+    const scores = TM.scores.filter(s=>s.goalId===g.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const latest = scores[0]||null;
+    const avg = latest ? ((latest.clarity+latest.alignment+latest.momentum+latest.belief)/4).toFixed(1) : null;
+    const scoreColor = !avg?"var(--gray-lt)":avg>=8?C.green:avg>=6?C.orange:avg>=4?C.gold:C.red;
+    const scoreLabel = !avg?"No score yet":avg>=8?"Strong Magnetization ✨":avg>=6?"Moderate Progress 📈":avg>=4?"Weak Energy ⚠️":"Blocked 🔴";
+    return `
+    <div class="card" style="padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--gold)">${g.goal}</div>
+          ${latest?`<div style="font-size:10px;color:var(--gray-lt);margin-top:2px">Last scored: ${latest.date}</div>`:""}
+        </div>
+        ${avg?`<div style="text-align:right">
+          <div style="font-size:24px;font-weight:700;color:${scoreColor}">${avg}</div>
+          <div style="font-size:9px;color:${scoreColor};font-weight:700">${scoreLabel}</div>
+        </div>`:""}
+      </div>
+      ${latest?`
+        ${DRIVERS.map(d=>`
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:10px;color:${d.color};font-weight:700">${d.label}</span>
+              <span style="font-size:11px;font-weight:700;color:${d.color}">${latest[d.key]}/10</span>
+            </div>
+            ${bar(latest[d.key]*10, d.color, 6)}
+          </div>`).join("")}
+        ${latest.blocker?`<div style="margin-top:8px;padding:8px 10px;background:${C.red}10;
+          border:1px solid ${C.red}22;border-radius:8px;font-size:11px;color:${C.red}">
+          ⚠️ Blocker: ${latest.blocker}</div>`:""}
+        ${scores.length>1?`
+          <div style="margin-top:10px">
+            <div style="font-size:9px;color:var(--gold-dk);letter-spacing:1px;margin-bottom:6px">TREND</div>
+            <div style="display:flex;gap:4px;align-items:flex-end;height:36px">
+              ${scores.slice(0,8).reverse().map(s=>{
+                const sc = ((s.clarity+s.alignment+s.momentum+s.belief)/4);
+                const h = Math.round(sc*3.6);
+                const col = sc>=8?C.green:sc>=6?C.orange:C.red;
+                return `<div style="flex:1;height:${h}px;background:${col};border-radius:3px 3px 0 0;
+                  opacity:.8" title="${sc.toFixed(1)}"></div>`;
+              }).join("")}
+            </div>
+          </div>`:""}
+      `:`<div style="text-align:center;padding:12px;color:var(--gray-lt);font-size:11px">
+        No score yet — rate this goal below
+      </div>`}
+      <button class="btn btn-gold btn-block" style="margin-top:12px;font-size:11px"
+        data-action="tm-score-goal" data-gidx="${gi}">⚡ Score This Goal</button>
+    </div>`;}).join("")}`;
+}
+
 // ══════════════════════════════════════════════════════════════
 const RENDERS = {
   dashboard:    renderDashboard,
@@ -3142,6 +3503,8 @@ const RENDERS = {
   education:    renderEducation,
   resources:    renderResources,
   files:        renderFiles,
+  secondbrain:  renderSecondBrain,
+  treemagnet:   renderTreeMagnet,
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -3548,6 +3911,329 @@ function handleClick(e){
 
     case "delete-file":
       if(confirm("Remove this file/link?")){ (S.files||[]).splice(idx,1); save(); render(); } break;
+
+    // ── SECOND BRAIN HANDLERS ───────────────────────────────
+    case "sb-view":
+      if(!S.secondBrain) S.secondBrain={view:"capture",capture:[],ideas:[],knowledge:[]};
+      S.secondBrain.view = el.dataset.view;
+      save(); render(); break;
+
+    case "sb-idea-filter":
+      window._sbIdeaFilter = el.dataset.val; render(); break;
+
+    case "sb-know-filter":
+      window._sbKnowFilter = el.dataset.val; render(); break;
+
+    case "sb-add-capture":
+      openCustomModal("📥 Capture a Thought",`
+        <label class="lbl">Type</label>
+        <select id="m-stype" class="inp">
+          ${["Idea","Prayer","Reminder","Reflection","Insight","Lesson Learned"].map(t=>`<option value="${t}">${t}</option>`).join("")}
+        </select>
+        <label class="lbl">Your Thought / Note</label>
+        <textarea id="m-snote" class="inp" rows="3" style="resize:vertical" placeholder="What's on your mind?"></textarea>
+        <label class="lbl">Category</label>
+        <select id="m-scat" class="inp">
+          ${["Business","Spiritual","Work","Personal","Creative","DBA/Tech","Life","Other"].map(c=>`<option value="${c}">${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Tag (optional)</label>
+        <input id="m-stag" class="inp" placeholder="e.g. oracle, faith, marketing">
+        <label class="lbl">Priority</label>
+        <select id="m-spri" class="inp">
+          <option value="">Normal</option>
+          <option value="star">⭐ Star — Important</option>
+        </select>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const note=document.getElementById('m-snote').value.trim();
+            if(!note){alert('Please enter a thought');return;}
+            if(!S.secondBrain)S.secondBrain={view:'capture',capture:[],ideas:[],knowledge:[]};
+            S.secondBrain.capture.push({
+              type:g('m-stype').value, note,
+              category:g('m-scat').value,
+              tag:g('m-stag').value.trim(),
+              priority:g('m-spri').value==='star',
+              date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+            });
+            save(); closeCustomModal(); render();
+          ">Capture</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;
+
+    case "sb-edit-capture":{
+      const n = (S.secondBrain||{}).capture?.[idx]; if(!n) break;
+      openCustomModal("✏️ Edit Capture",`
+        <label class="lbl">Type</label>
+        <select id="m-stype" class="inp">
+          ${["Idea","Prayer","Reminder","Reflection","Insight","Lesson Learned"].map(t=>`<option value="${t}" ${t===n.type?"selected":""}>${t}</option>`).join("")}
+        </select>
+        <label class="lbl">Note</label>
+        <textarea id="m-snote" class="inp" rows="3" style="resize:vertical">${(n.note||"").replace(/</g,"&lt;")}</textarea>
+        <label class="lbl">Category</label>
+        <select id="m-scat" class="inp">
+          ${["Business","Spiritual","Work","Personal","Creative","DBA/Tech","Life","Other"].map(c=>`<option value="${c}" ${c===n.category?"selected":""}>${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Tag</label>
+        <input id="m-stag" class="inp" value="${(n.tag||"").replace(/"/g,"&quot;")}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.secondBrain.capture[${idx}].type=g('m-stype').value;
+            S.secondBrain.capture[${idx}].note=document.getElementById('m-snote').value.trim();
+            S.secondBrain.capture[${idx}].category=g('m-scat').value;
+            S.secondBrain.capture[${idx}].tag=g('m-stag').value.trim();
+            save(); closeCustomModal(); render();
+          ">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
+
+    case "sb-delete-capture":
+      if(confirm("Delete this capture?")){ S.secondBrain.capture.splice(idx,1); save(); render(); } break;
+
+    case "sb-add-idea":
+      openCustomModal("💡 Add Idea",`
+        <label class="lbl">The Idea</label>
+        <input id="m-sidea" class="inp" placeholder="Describe your idea…">
+        <label class="lbl">Category</label>
+        <select id="m-sicat" class="inp">
+          ${["Business","Creative","DBA/Tech","Marketing","Product","Personal","Spiritual","Other"].map(c=>`<option value="${c}">${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Potential Project</label>
+        <input id="m-siproj" class="inp" placeholder="e.g. Kudrant Lab, Poetry Book…">
+        <label class="lbl">Status</label>
+        <select id="m-sist" class="inp">
+          ${["New","Explore","In Progress","Archived"].map(s=>`<option value="${s}">${s}</option>`).join("")}
+        </select>
+        <label class="lbl">Priority</label>
+        <select id="m-sipri" class="inp">
+          <option value="">Normal</option>
+          <option value="star">⭐ Star — Important</option>
+        </select>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const idea=g('m-sidea').value.trim();
+            if(!idea){alert('Enter your idea');return;}
+            if(!S.secondBrain)S.secondBrain={view:'ideas',capture:[],ideas:[],knowledge:[]};
+            S.secondBrain.ideas.push({
+              idea, category:g('m-sicat').value,
+              project:g('m-siproj').value.trim(),
+              status:g('m-sist').value,
+              priority:g('m-sipri').value==='star'
+            });
+            save(); closeCustomModal(); render();
+          ">Add Idea</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;
+
+    case "sb-edit-idea":{
+      const idea = (S.secondBrain||{}).ideas?.[idx]; if(!idea) break;
+      openCustomModal("✏️ Edit Idea",`
+        <label class="lbl">The Idea</label>
+        <input id="m-sidea" class="inp" value="${(idea.idea||"").replace(/"/g,"&quot;")}">
+        <label class="lbl">Category</label>
+        <select id="m-sicat" class="inp">
+          ${["Business","Creative","DBA/Tech","Marketing","Product","Personal","Spiritual","Other"].map(c=>`<option value="${c}" ${c===idea.category?"selected":""}>${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Potential Project</label>
+        <input id="m-siproj" class="inp" value="${(idea.project||"").replace(/"/g,"&quot;")}">
+        <label class="lbl">Status</label>
+        <select id="m-sist" class="inp">
+          ${["New","Explore","In Progress","Archived"].map(s=>`<option value="${s}" ${s===idea.status?"selected":""}>${s}</option>`).join("")}
+        </select>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.secondBrain.ideas[${idx}].idea=g('m-sidea').value.trim();
+            S.secondBrain.ideas[${idx}].category=g('m-sicat').value;
+            S.secondBrain.ideas[${idx}].project=g('m-siproj').value.trim();
+            S.secondBrain.ideas[${idx}].status=g('m-sist').value;
+            save(); closeCustomModal(); render();
+          ">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
+
+    case "sb-delete-idea":
+      if(confirm("Delete this idea?")){ S.secondBrain.ideas.splice(idx,1); save(); render(); } break;
+
+    case "sb-add-knowledge":
+      openCustomModal("🗄️ Add Knowledge",`
+        <label class="lbl">Topic</label>
+        <input id="m-sktop" class="inp" placeholder="e.g. Oracle RMAN, Focus, Business Growth">
+        <label class="lbl">Category</label>
+        <select id="m-skcat" class="inp">
+          ${["DBA Knowledge","Business Strategy","Writing / Poetry","Spiritual Growth","Life Lessons","Productivity","Other"].map(c=>`<option value="${c}">${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Key Insight</label>
+        <textarea id="m-skinsight" class="inp" rows="3" style="resize:vertical" placeholder="What did you learn?"></textarea>
+        <label class="lbl">Source / Resource</label>
+        <input id="m-skres" class="inp" placeholder="e.g. Book title, mentor, experience…">
+        <label class="lbl">Tags</label>
+        <input id="m-sktags" class="inp" placeholder="e.g. oracle rman sql">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const topic=g('m-sktop').value.trim();
+            const insight=document.getElementById('m-skinsight').value.trim();
+            if(!topic||!insight){alert('Enter topic and insight');return;}
+            if(!S.secondBrain)S.secondBrain={view:'knowledge',capture:[],ideas:[],knowledge:[]};
+            S.secondBrain.knowledge.push({
+              topic, category:g('m-skcat').value, insight,
+              resource:g('m-skres').value.trim(),
+              tags:g('m-sktags').value.trim()
+            });
+            save(); closeCustomModal(); render();
+          ">Save Knowledge</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;
+
+    case "sb-edit-knowledge":{
+      const k = (S.secondBrain||{}).knowledge?.[idx]; if(!k) break;
+      openCustomModal("✏️ Edit Knowledge",`
+        <label class="lbl">Topic</label>
+        <input id="m-sktop" class="inp" value="${(k.topic||"").replace(/"/g,"&quot;")}">
+        <label class="lbl">Category</label>
+        <select id="m-skcat" class="inp">
+          ${["DBA Knowledge","Business Strategy","Writing / Poetry","Spiritual Growth","Life Lessons","Productivity","Other"].map(c=>`<option value="${c}" ${c===k.category?"selected":""}>${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Key Insight</label>
+        <textarea id="m-skinsight" class="inp" rows="3" style="resize:vertical">${(k.insight||"").replace(/</g,"&lt;")}</textarea>
+        <label class="lbl">Source</label>
+        <input id="m-skres" class="inp" value="${(k.resource||"").replace(/"/g,"&quot;")}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.secondBrain.knowledge[${idx}].topic=g('m-sktop').value.trim();
+            S.secondBrain.knowledge[${idx}].category=g('m-skcat').value;
+            S.secondBrain.knowledge[${idx}].insight=document.getElementById('m-skinsight').value.trim();
+            S.secondBrain.knowledge[${idx}].resource=g('m-skres').value.trim();
+            save(); closeCustomModal(); render();
+          ">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
+
+    case "sb-delete-knowledge":
+      if(confirm("Delete this knowledge entry?")){ S.secondBrain.knowledge.splice(idx,1); save(); render(); } break;
+
+    // ── TREE MAGNET HANDLERS ────────────────────────────────
+    case "tm-view":
+      if(!S.treeMagnet) S.treeMagnet={view:"tree",goals:[],scores:[]};
+      S.treeMagnet.view = el.dataset.view;
+      save(); render(); break;
+
+    case "tm-toggle-goal":
+      window._tmSelGoal = window._tmSelGoal === idx ? null : idx;
+      render(); break;
+
+    case "tm-view-energy":
+      if(!S.treeMagnet) S.treeMagnet={view:"energy",goals:[],scores:[]};
+      S.treeMagnet.view = "energy";
+      window._tmEnergyGoal = parseInt(el.dataset.gidx);
+      save(); render(); break;
+
+    case "tm-add-goal":
+      openCustomModal("🌳 Add Goal Tree",`
+        <label class="lbl">Goal Name</label>
+        <input id="m-tgoal" class="inp" placeholder="e.g. $50K Monthly Income">
+        <label class="lbl">Trunk — Core intention</label>
+        <input id="m-ttrunk" class="inp" placeholder="One sentence describing the goal">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const goal=g('m-tgoal').value.trim();
+            if(!goal){alert('Enter a goal name');return;}
+            if(!S.treeMagnet)S.treeMagnet={view:'tree',goals:[],scores:[]};
+            S.treeMagnet.goals.push({
+              id:Date.now(), goal,
+              roots:[], trunk:g('m-ttrunk').value.trim(),
+              branches:[], leaves:[], fruit:[], energy:[]
+            });
+            save(); closeCustomModal(); render();
+          ">Create Tree</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;
+
+    case "tm-edit-goal":{
+      const g2 = (S.treeMagnet||{}).goals?.[idx]; if(!g2) break;
+      openCustomModal("✏️ Edit Goal",`
+        <label class="lbl">Goal Name</label>
+        <input id="m-tgoal" class="inp" value="${(g2.goal||"").replace(/"/g,"&quot;")}">
+        <label class="lbl">Trunk — Core intention</label>
+        <input id="m-ttrunk" class="inp" value="${(g2.trunk||"").replace(/"/g,"&quot;")}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.treeMagnet.goals[${idx}].goal=g('m-tgoal').value.trim();
+            S.treeMagnet.goals[${idx}].trunk=g('m-ttrunk').value.trim();
+            save(); closeCustomModal(); render();
+          ">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
+
+    case "tm-delete-goal":
+      if(confirm("Remove this goal tree?")){ S.treeMagnet.goals.splice(idx,1); window._tmSelGoal=null; save(); render(); } break;
+
+    case "tm-add-part":{
+      const part = el.dataset.part;
+      const gidx = parseInt(el.dataset.gidx);
+      const PART_LABELS = {roots:"Belief / Root",branches:"Branch / Project",leaves:"Action / Leaf",fruit:"Result / Fruit"};
+      openCustomModal(`+ Add ${part.charAt(0).toUpperCase()+part.slice(1)}`,`
+        <label class="lbl">${PART_LABELS[part]||"Item"}</label>
+        <input id="m-tpart" class="inp" placeholder="Enter text…">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const val=g('m-tpart').value.trim();
+            if(!val){alert('Enter something');return;}
+            S.treeMagnet.goals[${gidx}]['${part}'].push(val);
+            save(); closeCustomModal(); render();
+          ">Add</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
+
+    case "tm-delete-part":{
+      const part2 = el.dataset.part, gidx2 = parseInt(el.dataset.gidx), pidx = parseInt(el.dataset.pidx);
+      if(confirm("Remove this item?")){ S.treeMagnet.goals[gidx2][part2].splice(pidx,1); save(); render(); } break;}
+
+    case "tm-score-goal":{
+      const gidx3 = parseInt(el.dataset.gidx);
+      const g3 = (S.treeMagnet||{}).goals?.[gidx3]; if(!g3) break;
+      openCustomModal(`⚡ Score: ${g3.goal}`,`
+        <div style="font-size:11px;color:var(--gray-lt);margin-bottom:12px">Rate each driver 1–10 (1=blocked, 10=magnetized)</div>
+        ${[
+          {key:"clarity",   label:"🔭 Vision Clarity",       desc:"How clear is this goal?"},
+          {key:"alignment", label:"💜 Emotional Alignment",   desc:"How excited / certain do you feel?"},
+          {key:"momentum",  label:"🚀 Action Momentum",       desc:"Are you consistently taking action?"},
+          {key:"belief",    label:"⭐ Belief Strength",       desc:"Do you truly believe it's possible?"},
+        ].map(d=>`
+          <label class="lbl">${d.label}</label>
+          <div style="font-size:10px;color:var(--gray-lt);margin-top:-6px;margin-bottom:6px">${d.desc}</div>
+          <input id="m-${d.key}" class="inp" type="number" min="1" max="10" placeholder="1–10">`).join("")}
+        <label class="lbl">Blocker (optional)</label>
+        <input id="m-blocker" class="inp" placeholder="What's holding this goal back?">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const c=parseInt(g('m-clarity').value)||0;
+            const a=parseInt(g('m-alignment').value)||0;
+            const mo=parseInt(g('m-momentum').value)||0;
+            const b=parseInt(g('m-belief').value)||0;
+            if(!c||!a||!mo||!b){alert('Please score all 4 drivers');return;}
+            if(!S.treeMagnet.scores)S.treeMagnet.scores=[];
+            S.treeMagnet.scores.push({
+              goalId:S.treeMagnet.goals[${gidx3}].id,
+              date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+              clarity:Math.min(10,Math.max(1,c)),
+              alignment:Math.min(10,Math.max(1,a)),
+              momentum:Math.min(10,Math.max(1,mo)),
+              belief:Math.min(10,Math.max(1,b)),
+              blocker:g('m-blocker').value.trim()
+            });
+            save(); closeCustomModal(); render();
+          ">Save Score</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
 
     // ── RESOURCE MAP HANDLERS ───────────────────────────────
     case "rm-toggle":{
@@ -4272,6 +4958,10 @@ const TAB_GROUPS = {
     {id:"education",   icon:"🎓", label:"Education"},
     {id:"resources",   icon:"🗂️", label:"Resources"},
     {id:"files",       icon:"📎", label:"Files"},
+  ],
+  mind: [
+    {id:"secondbrain",  icon:"📝", label:"Second Brain"},
+    {id:"treemagnet",   icon:"🌳", label:"Tree Magnet"},
   ],
 };
 
