@@ -661,7 +661,7 @@ async function pullFromCloud(){
         S = cloudData;
         localStorage.setItem("lcc_state", JSON.stringify(S));
         render();
-        showSyncToast("☁️ Your data loaded from cloud!");
+        if(cloudTime > localTime) showSyncToast("☁️ Data synced from cloud!");
       }
     }
     setSyncIndicator("idle");
@@ -5306,6 +5306,8 @@ function unlockApp(){
       </div>`;
     pullFromCloud().then(()=>{ if(!S._savedAt) render(); });
   } else {
+    // Always render local data first so app feels instant,
+    // then silently pull cloud in background — if cloud is newer it will re-render
     render();
     if(sbReady) pullFromCloud();
   }
