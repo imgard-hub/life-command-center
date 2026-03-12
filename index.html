@@ -2963,6 +2963,22 @@ function openModal(title, fields, onSave){
 }
 
 function closeModal(){ $("modal-overlay").classList.remove("open"); modalCallback=null; }
+
+// Custom HTML modal — hides the standard Save/Cancel footer
+function openCustomModal(title, bodyHTML){
+  $("modal-title").textContent = title;
+  $("modal-body").innerHTML = bodyHTML;
+  // Hide the standard footer buttons — custom modal has its own
+  const footer = document.querySelector("#modal > div[style*='display:flex']");
+  if(footer) footer.style.display = "none";
+  $("modal-overlay").classList.add("open");
+}
+function closeCustomModal(){
+  const footer = document.querySelector("#modal > div[style*='display:flex']");
+  if(footer) footer.style.display = "";
+  $("modal-overlay").classList.remove("open");
+  modalCallback = null;
+}
 function saveModal(){ if(modalCallback) modalCallback(); }
 
 // ══════════════════════════════════════════════════════════════
@@ -3079,8 +3095,7 @@ function handleClick(e){
       const BIZ_CATS      = ["Software","Marketing","Advertising","Education / Training","Contractors","Business Tools","Office Supplies","Equipment","Travel","Website","Subscriptions","Professional Services","Misc Business"];
       const PAY_METHODS   = ["Credit Card","Debit Card","Cash","Bank Transfer","Business Card","Zelle/Venmo","Auto-Pay","Other"];
       const curMonthKey   = `${now.getFullYear()}-${now.getMonth()+1}`;
-      openModal(`
-        <h3 style="color:var(--gold);margin:0 0 16px">💸 Log Expense</h3>
+      openCustomModal("💸 Log Expense",`
         <label class="lbl">Date</label>
         <input id="m-date" class="inp" type="date" value="${now.getFullYear()}-${mo}-${dy}">
         <label class="lbl">Type</label>
@@ -3090,10 +3105,10 @@ function handleClick(e){
         </select>
         <label class="lbl">Category</label>
         <select id="m-cat" class="inp">
-          <optgroup label="Personal">
+          <optgroup label="— Personal —">
             ${PERSONAL_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}
           </optgroup>
-          <optgroup label="Business">
+          <optgroup label="— Business —">
             ${BIZ_CATS.map(c=>`<option value="${c}">${c}</option>`).join("")}
           </optgroup>
         </select>
@@ -3119,28 +3134,30 @@ function handleClick(e){
         </select>
         <label class="lbl">Notes (optional)</label>
         <input id="m-notes" class="inp" placeholder="Optional notes">
-        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
-          const d=g('m-date').value, t=g('m-type').value, cat=g('m-cat').value,
-                desc=g('m-desc').value.trim(), amt=parseFloat(g('m-amt').value)||0,
-                pay=g('m-pay').value, freq=g('m-freq').value, nw=g('m-nw').value,
-                notes=g('m-notes').value.trim();
-          if(!amt){alert('Please enter an amount');return;}
-          const dateParts = d.split('-');
-          const monthKey = dateParts[0]+'-'+parseInt(dateParts[1]);
-          const displayDate = (dateParts[1]||mo)+'/'+(dateParts[2]||dy);
-          S.expenses.push({date:displayDate,month:monthKey,type:t,category:cat,description:desc,amount:amt,payMethod:pay,freq,needWant:nw,notes});
-          save(); closeModal(); render();
-        ">Log Expense</button>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const d=g('m-date').value||'';
+            const amt=parseFloat(g('m-amt').value)||0;
+            if(!amt){alert('Please enter an amount');return;}
+            const parts=d.split('-');
+            const mKey=parts[0]+'-'+parseInt(parts[1]);
+            const disp=(parts[1]||'??')+'/'+(parts[2]||'??');
+            S.expenses.push({date:disp,month:mKey,type:g('m-type').value,category:g('m-cat').value,
+              description:g('m-desc').value.trim(),amount:amt,payMethod:g('m-pay').value,
+              freq:g('m-freq').value,needWant:g('m-nw').value,notes:g('m-notes').value.trim()});
+            save(); closeCustomModal(); render();
+          ">Log Expense</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
       `); break;}
 
     case "edit-expense":{
       const e = S.expenses[idx];
       if(!e) break;
-      const PERSONAL_CATS = ["Bills","Groceries","Entertainment","Dining Out","Self Care","Health Care","Fitness","Clothes","Car Maintenance","Gas","Vacation","Home","Gifts","Guilt Free Spending","Miscellaneous"];
-      const BIZ_CATS      = ["Software","Marketing","Advertising","Education / Training","Contractors","Business Tools","Office Supplies","Equipment","Travel","Website","Subscriptions","Professional Services","Misc Business"];
-      const PAY_METHODS   = ["Credit Card","Debit Card","Cash","Bank Transfer","Business Card","Zelle/Venmo","Auto-Pay","Other"];
-      openModal(`
-        <h3 style="color:var(--gold);margin:0 0 16px">✏️ Edit Expense</h3>
+      const PC2 = ["Bills","Groceries","Entertainment","Dining Out","Self Care","Health Care","Fitness","Clothes","Car Maintenance","Gas","Vacation","Home","Gifts","Guilt Free Spending","Miscellaneous"];
+      const BC2 = ["Software","Marketing","Advertising","Education / Training","Contractors","Business Tools","Office Supplies","Equipment","Travel","Website","Subscriptions","Professional Services","Misc Business"];
+      const PM2 = ["Credit Card","Debit Card","Cash","Bank Transfer","Business Card","Zelle/Venmo","Auto-Pay","Other"];
+      openCustomModal("✏️ Edit Expense",`
         <label class="lbl">Type</label>
         <select id="m-type" class="inp">
           <option value="Personal" ${e.type==="Personal"?"selected":""}>🔵 Personal</option>
@@ -3148,21 +3165,17 @@ function handleClick(e){
         </select>
         <label class="lbl">Category</label>
         <select id="m-cat" class="inp">
-          <optgroup label="Personal">
-            ${PERSONAL_CATS.map(c=>`<option value="${c}" ${c===e.category?"selected":""}>${c}</option>`).join("")}
+          <optgroup label="— Personal —">
+            ${PC2.map(c=>`<option value="${c}" ${c===e.category?"selected":""}>${c}</option>`).join("")}
           </optgroup>
-          <optgroup label="Business">
-            ${BIZ_CATS.map(c=>`<option value="${c}" ${c===e.category?"selected":""}>${c}</option>`).join("")}
+          <optgroup label="— Business —">
+            ${BC2.map(c=>`<option value="${c}" ${c===e.category?"selected":""}>${c}</option>`).join("")}
           </optgroup>
         </select>
         <label class="lbl">Description</label>
-        <input id="m-desc" class="inp" value="${e.description||""}">
+        <input id="m-desc" class="inp" value="${(e.description||"").replace(/"/g,"&quot;")}">
         <label class="lbl">Amount ($)</label>
         <input id="m-amt" class="inp" type="number" min="0" step="0.01" value="${e.amount||0}">
-        <label class="lbl">Payment Method</label>
-        <select id="m-pay" class="inp">
-          ${PAY_METHODS.map(p=>`<option value="${p}" ${p===e.payMethod?"selected":""}>${p}</option>`).join("")}
-        </select>
         <label class="lbl">Frequency</label>
         <select id="m-freq" class="inp">
           ${["One-time","Monthly","Quarterly","Yearly"].map(f=>`<option value="${f}" ${f===e.freq?"selected":""}>${f}</option>`).join("")}
@@ -3172,105 +3185,111 @@ function handleClick(e){
           <option value="Need" ${e.needWant==="Need"?"selected":""}>Need</option>
           <option value="Want" ${e.needWant==="Want"?"selected":""}>Want</option>
         </select>
-        <label class="lbl">Notes</label>
-        <input id="m-notes" class="inp" value="${e.notes||""}">
-        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
-          S.expenses[${idx}].type=g('m-type').value;
-          S.expenses[${idx}].category=g('m-cat').value;
-          S.expenses[${idx}].description=g('m-desc').value.trim();
-          S.expenses[${idx}].amount=parseFloat(g('m-amt').value)||0;
-          S.expenses[${idx}].payMethod=g('m-pay').value;
-          S.expenses[${idx}].freq=g('m-freq').value;
-          S.expenses[${idx}].needWant=g('m-nw').value;
-          S.expenses[${idx}].notes=g('m-notes').value.trim();
-          save(); closeModal(); render();
-        ">Save Changes</button>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.expenses[${idx}].type=g('m-type').value;
+            S.expenses[${idx}].category=g('m-cat').value;
+            S.expenses[${idx}].description=g('m-desc').value.trim();
+            S.expenses[${idx}].amount=parseFloat(g('m-amt').value)||0;
+            S.expenses[${idx}].freq=g('m-freq').value;
+            S.expenses[${idx}].needWant=g('m-nw').value;
+            save(); closeCustomModal(); render();
+          ">Save Changes</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
       `); break;}
 
     case "delete-expense":
       if(confirm("Delete this expense?")){ S.expenses.splice(idx,1); save(); render(); } break;
 
-    // ── NET WORTH HANDLERS ──────────────────────────────────
     case "add-asset":
-      openModal(`
-        <h3 style="color:var(--gold);margin:0 0 16px">🏦 Add Asset</h3>
+      openCustomModal("🏦 Add Asset",`
         <label class="lbl">Asset Name</label>
-        <input id="m-name" class="inp" placeholder="e.g. Savings Account, Car, Property">
+        <input id="m-name" class="inp" placeholder="e.g. Checking Account, Car, Property">
         <label class="lbl">Category</label>
         <select id="m-cat" class="inp">
           ${["Cash","Savings","Investments","Property","Retirement","Business","Other"].map(c=>`<option value="${c}">${c}</option>`).join("")}
         </select>
         <label class="lbl">Current Value ($)</label>
         <input id="m-val" class="inp" type="number" min="0" step="1" placeholder="0">
-        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
-          const name=g('m-name').value.trim(), cat=g('m-cat').value, val=parseFloat(g('m-val').value)||0;
-          if(!name){alert('Please enter a name');return;}
-          if(!S.netWorthAssets) S.netWorthAssets=[];
-          S.netWorthAssets.push({name,category:cat,value:val});
-          save(); closeModal(); render();
-        ">Add Asset</button>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const name=g('m-name').value.trim(),cat=g('m-cat').value,val=parseFloat(g('m-val').value)||0;
+            if(!name){alert('Enter a name');return;}
+            if(!S.netWorthAssets)S.netWorthAssets=[];
+            S.netWorthAssets.push({name,category:cat,value:val});
+            save(); closeCustomModal(); render();
+          ">Add Asset</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
       `); break;
 
     case "edit-asset":{
-      const a = S.netWorthAssets[idx];
+      const a = (S.netWorthAssets||[])[idx];
       if(!a) break;
-      openModal(`
-        <h3 style="color:var(--gold);margin:0 0 16px">✏️ Edit Asset</h3>
+      openCustomModal("✏️ Edit Asset",`
         <label class="lbl">Asset Name</label>
-        <input id="m-name" class="inp" value="${a.name||""}">
+        <input id="m-name" class="inp" value="${(a.name||"").replace(/"/g,"&quot;")}">
         <label class="lbl">Category</label>
         <select id="m-cat" class="inp">
           ${["Cash","Savings","Investments","Property","Retirement","Business","Other"].map(c=>`<option value="${c}" ${c===a.category?"selected":""}>${c}</option>`).join("")}
         </select>
         <label class="lbl">Current Value ($)</label>
         <input id="m-val" class="inp" type="number" min="0" step="1" value="${a.value||0}">
-        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
-          S.netWorthAssets[${idx}].name=g('m-name').value.trim();
-          S.netWorthAssets[${idx}].category=g('m-cat').value;
-          S.netWorthAssets[${idx}].value=parseFloat(g('m-val').value)||0;
-          save(); closeModal(); render();
-        ">Save</button>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.netWorthAssets[${idx}].name=g('m-name').value.trim();
+            S.netWorthAssets[${idx}].category=g('m-cat').value;
+            S.netWorthAssets[${idx}].value=parseFloat(g('m-val').value)||0;
+            save(); closeCustomModal(); render();
+          ">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
       `); break;}
 
     case "delete-asset":
       if(confirm("Remove this asset?")){ S.netWorthAssets.splice(idx,1); save(); render(); } break;
 
     case "add-liability":
-      openModal(`
-        <h3 style="color:var(--gold);margin:0 0 16px">➕ Add Liability</h3>
+      openCustomModal("➕ Add Liability",`
         <label class="lbl">Name</label>
         <input id="m-name" class="inp" placeholder="e.g. Credit Card, Student Loan">
         <label class="lbl">Current Balance ($)</label>
         <input id="m-bal" class="inp" type="number" min="0" step="1" placeholder="0">
-        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
-          const name=g('m-name').value.trim(), bal=parseFloat(g('m-bal').value)||0;
-          if(!name){alert('Please enter a name');return;}
-          if(!S.netWorthLiabilities) S.netWorthLiabilities=[];
-          S.netWorthLiabilities.push({name,balance:bal});
-          save(); closeModal(); render();
-        ">Add Liability</button>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const name=g('m-name').value.trim(),bal=parseFloat(g('m-bal').value)||0;
+            if(!name){alert('Enter a name');return;}
+            if(!S.netWorthLiabilities)S.netWorthLiabilities=[];
+            S.netWorthLiabilities.push({name,balance:bal});
+            save(); closeCustomModal(); render();
+          ">Add Liability</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
       `); break;
 
     case "edit-liability":{
-      const l = S.netWorthLiabilities[idx];
+      const l = (S.netWorthLiabilities||[])[idx];
       if(!l) break;
-      openModal(`
-        <h3 style="color:var(--gold);margin:0 0 16px">✏️ Edit Liability</h3>
+      openCustomModal("✏️ Edit Liability",`
         <label class="lbl">Name</label>
-        <input id="m-name" class="inp" value="${l.name||""}">
+        <input id="m-name" class="inp" value="${(l.name||"").replace(/"/g,"&quot;")}">
         <label class="lbl">Current Balance ($)</label>
         <input id="m-bal" class="inp" type="number" min="0" step="1" value="${l.balance||0}">
-        <button class="btn btn-gold btn-block" style="margin-top:8px" onclick="
-          S.netWorthLiabilities[${idx}].name=g('m-name').value.trim();
-          S.netWorthLiabilities[${idx}].balance=parseFloat(g('m-bal').value)||0;
-          save(); closeModal(); render();
-        ">Save</button>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.netWorthLiabilities[${idx}].name=g('m-name').value.trim();
+            S.netWorthLiabilities[${idx}].balance=parseFloat(g('m-bal').value)||0;
+            save(); closeCustomModal(); render();
+          ">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
       `); break;}
 
     case "delete-liability":
       if(confirm("Remove this liability?")){ S.netWorthLiabilities.splice(idx,1); save(); render(); } break;
 
-
+    case "toggle-meditation":
       S.meditation[idx].done = !S.meditation[idx].done;
       save(); render(); break;
 
