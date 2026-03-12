@@ -2989,6 +2989,125 @@ function renderResources(){
   </div>`;
 }
 
+// ── FILES & LINKS ──────────────────────────────────────────────
+function renderFiles(){
+  if(!S.files) S.files = [];
+
+  const TYPE_META = {
+    image:    {icon:"🖼️",  label:"Image",    color: C.pink},
+    document: {icon:"📄",  label:"Document", color: C.blue},
+    video:    {icon:"🎬",  label:"Video",    color: C.purple},
+    link:     {icon:"🔗",  label:"Link",     color: C.teal},
+  };
+
+  // Group by category
+  const cats = [...new Set(S.files.map(f => f.category||"General"))];
+  if(cats.length === 0) cats.push("General");
+
+  function isImageUrl(url){
+    if(!url) return false;
+    const u = url.toLowerCase().split("?")[0];
+    return /\.(jpg|jpeg|png|gif|webp|svg|avif)$/.test(u) ||
+      url.includes("drive.google.com/uc") ||
+      url.includes("imgur.com") ||
+      url.includes("i.ibb.co") ||
+      url.includes("imagekit.io");
+  }
+
+  function fileCard(f, i){
+    const meta = TYPE_META[f.type] || TYPE_META.link;
+    const showPreview = f.type === "image" && isImageUrl(f.url);
+    return `
+      <div class="card" style="margin-bottom:10px;padding:12px;position:relative">
+        <!-- delete btn -->
+        <button style="position:absolute;top:8px;right:8px;background:none;border:none;
+          color:rgba(255,255,255,.2);font-size:12px;cursor:pointer;line-height:1;
+          transition:color .2s" onmouseover="this.style.color='${C.red}'"
+          onmouseout="this.style.color='rgba(255,255,255,.2)'"
+          data-action="delete-file" data-idx="${i}">✕</button>
+
+        ${showPreview ? `
+          <a href="${f.url}" target="_blank" rel="noopener">
+            <img src="${f.url}" alt="${f.title||""}"
+              style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;
+              margin-bottom:8px;display:block">
+          </a>` : ""}
+
+        <div style="display:flex;align-items:center;gap:10px;padding-right:20px">
+          <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;
+            background:${meta.color}22;border:1px solid ${meta.color}44;
+            display:flex;align-items:center;justify-content:center;font-size:17px">
+            ${meta.icon}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--gold-soft);
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${f.title || f.url || "Untitled"}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+              <span style="font-size:9px;font-weight:700;color:${meta.color};
+                letter-spacing:1px">${meta.label.toUpperCase()}</span>
+              ${f.category?`<span style="font-size:9px;color:var(--gray-lt)">· ${f.category}</span>`:""}
+            </div>
+            ${f.description?`<div style="font-size:11px;color:var(--gray-lt);margin-top:4px;
+              line-height:1.4">${f.description}</div>`:""}
+          </div>
+        </div>
+
+        ${f.url?`
+          <a href="${f.url}" target="_blank" rel="noopener"
+            style="display:flex;align-items:center;gap:6px;margin-top:10px;padding:8px 12px;
+            background:${meta.color}11;border:1px solid ${meta.color}33;border-radius:8px;
+            text-decoration:none;color:${meta.color};font-size:11px;font-weight:600;
+            transition:background .2s" onmouseover="this.style.background='${meta.color}22'"
+            onmouseout="this.style.background='${meta.color}11'">
+            <span>↗</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+              ${f.url.replace(/^https?:\/\//,"")}
+            </span>
+          </a>`:""}
+      </div>`;
+  }
+
+  // Stats
+  const counts = Object.fromEntries(Object.keys(TYPE_META).map(k=>[k, S.files.filter(f=>f.type===k).length]));
+  const total = S.files.length;
+
+  return `
+  ${sectionHdr("📎","Files & Links","Your documents, images, videos and links — all in one place.")}
+
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+    ${Object.entries(TYPE_META).map(([k,m])=>`
+      <div style="background:${m.color}11;border:1px solid ${m.color}33;border-radius:10px;
+        padding:10px;text-align:center">
+        <div style="font-size:18px;margin-bottom:2px">${m.icon}</div>
+        <div style="font-size:16px;font-weight:700;color:${m.color}">${counts[k]||0}</div>
+        <div style="font-size:9px;color:var(--gray-lt);letter-spacing:1px">${m.label.toUpperCase()}</div>
+      </div>`).join("")}
+  </div>
+
+  <!-- Add button -->
+  <button class="btn btn-gold btn-block" style="margin-bottom:16px" data-action="add-file">
+    + Add File or Link
+  </button>
+
+  <!-- Files grouped by category -->
+  ${total === 0 ? `
+    <div class="card" style="text-align:center;padding:40px 20px;border:1px dashed rgba(255,255,255,.1)">
+      <div style="font-size:36px;margin-bottom:12px">📎</div>
+      <div style="font-size:14px;color:var(--gold-soft);font-weight:600;margin-bottom:6px">No files yet</div>
+      <div style="font-size:11px;color:var(--gray-lt)">Tap + Add File or Link to get started</div>
+    </div>` :
+    cats.filter(cat => S.files.some(f=>(f.category||"General")===cat)).map(cat=>`
+      <div style="margin-bottom:4px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold-dk);letter-spacing:2px;
+          text-transform:uppercase;margin-bottom:8px;padding-left:2px">${cat}</div>
+        ${S.files.map((f,i)=>(f.category||"General")===cat ? fileCard(f,i) : "").join("")}
+      </div>`).join("")
+  }`;
+}
+
 // ══════════════════════════════════════════════════════════════
 const RENDERS = {
   dashboard:    renderDashboard,
@@ -3022,6 +3141,7 @@ const RENDERS = {
   parenting:    renderParenting,
   education:    renderEducation,
   resources:    renderResources,
+  files:        renderFiles,
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -3380,6 +3500,54 @@ function handleClick(e){
 
     case "delete-liability":
       if(confirm("Remove this liability?")){ S.netWorthLiabilities.splice(idx,1); save(); render(); } break;
+
+    // ── FILES & LINKS HANDLERS ──────────────────────────────
+    case "add-file":{
+      const cats = [...new Set((S.files||[]).map(f=>f.category).filter(Boolean))];
+      const catOpts = ["General","Work","Personal","Business","Inspiration","Learning","Other",...cats.filter(c=>!["General","Work","Personal","Business","Inspiration","Learning","Other"].includes(c))];
+      openCustomModal("📎 Add File or Link",`
+        <label class="lbl">Title</label>
+        <input id="m-ftitle" class="inp" placeholder="e.g. Q1 Budget, Vision Board Photo…">
+        <label class="lbl">Type</label>
+        <select id="m-ftype" class="inp">
+          <option value="document">📄 Document (PDF, Word, etc.)</option>
+          <option value="image">🖼️ Image (shows preview)</option>
+          <option value="video">🎬 Video (YouTube, Vimeo…)</option>
+          <option value="link">🔗 Link (website, tool…)</option>
+        </select>
+        <label class="lbl">URL / Link</label>
+        <input id="m-furl" class="inp" placeholder="https://…">
+        <div style="font-size:10px;color:var(--gray-lt);margin-top:-6px;margin-bottom:8px">
+          💡 For images: use a direct image URL (.jpg/.png) or Google Drive share link
+        </div>
+        <label class="lbl">Category</label>
+        <select id="m-fcat" class="inp">
+          ${catOpts.map(c=>`<option value="${c}">${c}</option>`).join("")}
+        </select>
+        <label class="lbl">Description (optional)</label>
+        <input id="m-fdesc" class="inp" placeholder="Short note about this file…">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const url=g('m-furl').value.trim();
+            const title=g('m-ftitle').value.trim();
+            if(!url&&!title){alert('Please enter at least a title or URL');return;}
+            if(!S.files) S.files=[];
+            S.files.push({
+              title:title||url,
+              type:g('m-ftype').value,
+              url:url,
+              category:g('m-fcat').value,
+              description:g('m-fdesc').value.trim(),
+              added:new Date().toLocaleDateString()
+            });
+            save(); closeCustomModal(); render();
+          ">Add</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>
+      `); break;}
+
+    case "delete-file":
+      if(confirm("Remove this file/link?")){ (S.files||[]).splice(idx,1); save(); render(); } break;
 
     // ── RESOURCE MAP HANDLERS ───────────────────────────────
     case "rm-toggle":{
@@ -4103,6 +4271,7 @@ const TAB_GROUPS = {
     {id:"parenting",   icon:"👨‍👧", label:"Parenting"},
     {id:"education",   icon:"🎓", label:"Education"},
     {id:"resources",   icon:"🗂️", label:"Resources"},
+    {id:"files",       icon:"📎", label:"Files"},
   ],
 };
 
