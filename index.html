@@ -648,7 +648,7 @@ function loadState(){
 let S = loadState();
 
 // Pull latest from Supabase on load (if configured)
-async function pullFromCloud(){
+async function pullFromCloud(forceApply = false){
   if(!sbReady) return;
   try{
     setSyncIndicator("syncing");
@@ -656,12 +656,14 @@ async function pullFromCloud(){
     if(cloudData){
       const cloudTime = cloudData._savedAt || 0;
       const localTime = S._savedAt || 0;
-      // Always use cloud if: cloud is newer, OR local has no savedAt (fresh deploy / cleared browser)
-      if(cloudTime > localTime || !S._savedAt){
+      // On startup (forceApply=true): ALWAYS use cloud — it is the source of truth across devices
+      // On manual pull: always apply cloud data too
+      // Only skip if cloud is somehow older AND this is a background auto-sync (not startup)
+      if(forceApply || cloudTime >= localTime || !S._savedAt){
         S = cloudData;
         localStorage.setItem("lcc_state", JSON.stringify(S));
         render();
-        if(cloudTime > localTime) showSyncToast("☁️ Data synced from cloud!");
+        if(forceApply || cloudTime > localTime) showSyncToast("☁️ Data synced from cloud!");
       }
     }
     setSyncIndicator("idle");
@@ -5309,7 +5311,7 @@ function unlockApp(){
     // Always render local data first so app feels instant,
     // then silently pull cloud in background — if cloud is newer it will re-render
     render();
-    if(sbReady) pullFromCloud();
+    if(sbReady) pullFromCloud(true);  // forceApply=true: cloud is always source of truth on open
   }
 }
 
