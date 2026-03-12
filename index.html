@@ -2878,115 +2878,28 @@ function renderEducation(){
 }
 
 function renderResources(){
-  // ── Resource Map data — pre-seeded from your template ──────
+  // Initialize empty structure if not set
   if(!S.resourceMap) S.resourceMap = {
     whatIKnow: {
-      beliefs: [
-        {text:"I am loved and protected at all times", checked:false},
-        {text:"I am source", checked:false},
-      ],
-      historic: [
-        {text:"Napoleon Hill created over a million millionaires", checked:false},
-        {text:"The Wright Brothers...", checked:false},
-        {text:"Bob Proctor...", checked:false},
-      ],
-      inspiring: [
-        {text:"Sony f1.8 28mm Lens", checked:false},
-        {text:"Sony 18-110mm F/4 Cine Zoom", checked:false},
-        {text:"Wide angle lens?", checked:false},
-      ],
-      scientific: [
-        {text:"My body is a self healing machine", checked:false},
-        {text:"If I am in a high vibe, I attract more faster", checked:false},
-      ],
-      skills: [
-        {text:"Poetry", checked:false},
-        {text:"Database Administration", checked:false},
-        {text:"Oracle DBA", checked:false},
-        {text:"Collaboration", checked:false},
-        {text:"Organization", checked:false},
-        {text:"Data Guard", checked:false},
-        {text:"Golden Gate", checked:false},
-        {text:"RMAN", checked:false},
-        {text:"Website Design", checked:false},
-        {text:"Canva Design", checked:false},
-        {text:"Creating Journals", checked:false},
-      ],
+      beliefs:    [],
+      historic:   [],
+      inspiring:  [],
+      scientific: [],
+      skills:     [],
     },
     whoIKnow: {
-      pepTalks: [
-        {text:"Clairine Youm", checked:false},
-        {text:"Mary Lockhart", checked:false},
-        {text:"Meka Gerald", checked:false},
-        {text:"Mastermind Community", checked:false},
-        {text:"Elonge Musinga", checked:false},
-      ],
-      brainstorming: [
-        {text:"Clairine Youm", checked:false},
-        {text:"Elonge Musinga", checked:false},
-        {text:"Pam Brossman", checked:false},
-        {text:"Mastermind Community", checked:false},
-        {text:"Bizsister", checked:false},
-        {text:"Bizclub", checked:false},
-        {text:"Lytte", checked:false},
-      ],
-      networking: [
-        {text:"Bizsister", checked:false},
-        {text:"Bizclub", checked:false},
-        {text:"Pam Brossman", checked:false},
-      ],
-      collaboration: [
-        {text:"Clairine", checked:false},
-        {text:"Bizsister", checked:false},
-        {text:"Bizclub", checked:false},
-        {text:"Lytte", checked:false},
-      ],
+      pepTalks:      [],
+      brainstorming: [],
+      networking:    [],
+      collaboration: [],
     },
     otherResources: {
-      techniques: [
-        {text:"Map", checked:false},
-        {text:"Meditation", checked:false},
-        {text:"Affirmations", checked:false},
-        {text:"Manifestation Container", checked:false},
-        {text:"Yoga", checked:false},
-        {text:"Qi Gong", checked:false},
-        {text:"Tai Chi", checked:false},
-      ],
-      tools: [
-        {text:"40 Day Abundance Program", checked:false, url:""},
-        {text:"Milanote", checked:false, url:"https://milanote.com"},
-        {text:"Circle.so", checked:false, url:"https://circle.so"},
-        {text:"Bizsister.com", checked:false, url:"https://bizsister.com"},
-        {text:"Canva.com", checked:false, url:"https://canva.com"},
-      ],
-      happyPlaces: [
-        {text:"Beach", checked:false},
-        {text:"Mountains", checked:false},
-        {text:"Reading", checked:false},
-        {text:"Writing Poetry", checked:false},
-        {text:"Concerts", checked:false},
-      ],
-      mentors: [
-        {text:"Abraham (Esther Hicks)", checked:false},
-        {text:"Bob Proctor / Sandy Gallagher", checked:false},
-        {text:"Collette", checked:false},
-        {text:"Pam Brossman", checked:false},
-        {text:"Amber Challus", checked:false},
-        {text:"Chellee", checked:false},
-      ],
-      books: [
-        {text:"40 Day Prosperity Plan", checked:false},
-        {text:"Your Invisible Power", checked:false},
-        {text:"Feel Free To Prosper", checked:false},
-        {text:"Think And Grow Rich", checked:false},
-      ],
-      activities: [
-        {text:"Roller Skate", checked:false},
-        {text:"Cycling (Bicycle)", checked:false},
-        {text:"Dancing", checked:false},
-        {text:"Yoga", checked:false},
-        {text:"Guitar", checked:false},
-      ],
+      techniques:  [],
+      tools:       [],
+      happyPlaces: [],
+      mentors:     [],
+      books:       [],
+      activities:  [],
     }
   };
 
@@ -2997,24 +2910,29 @@ function renderResources(){
       <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
         border-radius:10px;padding:12px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-size:11px;font-weight:700;color:${accentColor};letter-spacing:1px;text-transform:uppercase">${title}</div>
-          <button style="background:none;border:none;color:var(--gold-dk);font-size:10px;cursor:pointer;padding:0"
+          <div style="font-size:10px;font-weight:700;color:${accentColor};letter-spacing:1px">${title.toUpperCase()}</div>
+          <button style="background:none;border:1px solid ${accentColor}44;border-radius:6px;
+            color:${accentColor};font-size:10px;cursor:pointer;padding:2px 8px;font-family:Montserrat,sans-serif"
             data-action="rm-add-item" data-section="${section}" data-sub="${subsection}">+ Add</button>
         </div>
+        ${items.length===0?`<div style="font-size:11px;color:rgba(255,255,255,.2);font-style:italic;padding:4px 0">Empty — tap + Add</div>`:""}
         ${items.map((item,i)=>`
-          <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;
             border-bottom:1px solid rgba(255,255,255,.04)">
-            <input type="checkbox" ${item.checked?"checked":""} style="margin-top:2px;accent-color:${accentColor};flex-shrink:0;cursor:pointer"
+            <input type="checkbox" ${item.checked?"checked":""} 
+              style="width:14px;height:14px;accent-color:${accentColor};flex-shrink:0;cursor:pointer"
               data-action="rm-toggle" data-section="${section}" data-sub="${subsection}" data-idx="${i}">
-            <div style="flex:1;min-width:0">
-              <span style="font-size:12px;color:${item.checked?"var(--gray-lt)":"var(--gold-soft)"};
-                text-decoration:${item.checked?"line-through":"none"}">${item.text}</span>
-              ${item.url?`<a href="${item.url}" target="_blank" rel="noopener"
-                style="display:block;font-size:9px;color:${C.blue};margin-top:1px;overflow:hidden;
-                text-overflow:ellipsis;white-space:nowrap">${item.url}</a>`:""}
-            </div>
-            <button style="background:none;border:none;color:rgba(255,255,255,.2);font-size:10px;cursor:pointer;
-              flex-shrink:0;padding:0" data-action="rm-delete-item" data-section="${section}"
+            <span style="flex:1;font-size:12px;line-height:1.4;
+              color:${item.checked?"rgba(255,255,255,.3)":"var(--gold-soft)"};
+              text-decoration:${item.checked?"line-through":"none"};
+              word-break:break-word">${item.text}</span>
+            ${item.url?`<a href="${item.url}" target="_blank" rel="noopener"
+              style="font-size:9px;color:${C.blue};flex-shrink:0">🔗</a>`:""}
+            <button style="background:none;border:none;color:rgba(255,255,255,.2);
+              font-size:11px;cursor:pointer;flex-shrink:0;line-height:1;padding:0 2px;
+              transition:color .2s" onmouseover="this.style.color='${C.red}'" 
+              onmouseout="this.style.color='rgba(255,255,255,.2)'"
+              data-action="rm-delete-item" data-section="${section}"
               data-sub="${subsection}" data-idx="${i}">✕</button>
           </div>`).join("")}
       </div>`;
@@ -3023,55 +2941,49 @@ function renderResources(){
   return `
   ${sectionHdr("🗂️","Resource Map","Everything you know, everyone you know, every tool you have.")}
 
-  <!-- 3-column layout -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:start">
+  <!-- 3-column layout — full width stacked cards -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start">
 
     <!-- COL 1: What do I Know -->
-    <div>
-      <div style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:14px;margin-bottom:0">
-        <div style="font-size:14px;font-weight:700;color:var(--gold);text-align:center;margin-bottom:12px;
-          padding-bottom:8px;border-bottom:1px solid rgba(201,168,76,.2)">What do I Know</div>
-        ${rmCard("God / Source / Higher Self", rm.whatIKnow.beliefs, "whatIKnow", "beliefs", C.gold)}
-        ${rmCard("Historic", rm.whatIKnow.historic, "whatIKnow", "historic", C.orange)}
-        ${rmCard("Inspiring", rm.whatIKnow.inspiring, "whatIKnow", "inspiring", C.purple)}
-        ${rmCard("Scientific", rm.whatIKnow.scientific, "whatIKnow", "scientific", C.blue)}
-        ${rmCard("Skills & Experience", rm.whatIKnow.skills, "whatIKnow", "skills", C.green)}
+    <div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);
+      border-radius:14px;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold);text-align:center;
+        margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(201,168,76,.2)">
+        What do I Know
       </div>
+      ${rmCard("God / Source / Higher Self", rm.whatIKnow.beliefs,    "whatIKnow","beliefs",    C.gold)}
+      ${rmCard("Historic",                  rm.whatIKnow.historic,   "whatIKnow","historic",   C.orange)}
+      ${rmCard("Inspiring",                 rm.whatIKnow.inspiring,  "whatIKnow","inspiring",  C.purple)}
+      ${rmCard("Scientific",                rm.whatIKnow.scientific, "whatIKnow","scientific",  C.blue)}
+      ${rmCard("Skills & Experience",       rm.whatIKnow.skills,     "whatIKnow","skills",     C.green)}
     </div>
 
     <!-- COL 2: Who Do I Know -->
-    <div>
-      <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:14px">
-        <div style="font-size:14px;font-weight:700;color:${C.blue};text-align:center;margin-bottom:12px;
-          padding-bottom:8px;border-bottom:1px solid rgba(59,130,246,.2)">Who Do I Know</div>
-        ${rmCard("Pep Talks", rm.whoIKnow.pepTalks, "whoIKnow", "pepTalks", C.gold)}
-        ${rmCard("Brainstorming", rm.whoIKnow.brainstorming, "whoIKnow", "brainstorming", C.orange)}
-        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:10px">
-          <div style="font-size:11px;font-weight:700;color:${C.purple};letter-spacing:1px;margin-bottom:8px">SANDY GALLAGHER VIDEO</div>
-          <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:20px;margin-bottom:4px">▶️</div>
-            <div style="font-size:11px;color:var(--gold-soft);font-weight:600">Sandy Gallagher On Visioneering</div>
-            <a href="https://www.youtube.com/watch?v=E50d" target="_blank" rel="noopener"
-              style="font-size:9px;color:${C.blue};display:block;margin-top:4px">youtube.com/watch?v=E50d...</a>
-          </div>
-        </div>
-        ${rmCard("Networking", rm.whoIKnow.networking, "whoIKnow", "networking", C.teal)}
-        ${rmCard("Collaboration", rm.whoIKnow.collaboration, "whoIKnow", "collaboration", C.green)}
+    <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);
+      border-radius:14px;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:${C.blue};text-align:center;
+        margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(59,130,246,.2)">
+        Who Do I Know
       </div>
+      ${rmCard("Pep Talks",     rm.whoIKnow.pepTalks,      "whoIKnow","pepTalks",      C.gold)}
+      ${rmCard("Brainstorming", rm.whoIKnow.brainstorming, "whoIKnow","brainstorming", C.orange)}
+      ${rmCard("Networking",    rm.whoIKnow.networking,    "whoIKnow","networking",    C.teal)}
+      ${rmCard("Collaboration", rm.whoIKnow.collaboration, "whoIKnow","collaboration", C.green)}
     </div>
 
     <!-- COL 3: Other Resources -->
-    <div>
-      <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:12px;padding:14px">
-        <div style="font-size:14px;font-weight:700;color:${C.green};text-align:center;margin-bottom:12px;
-          padding-bottom:8px;border-bottom:1px solid rgba(16,185,129,.2)">Other Resources</div>
-        ${rmCard("Techniques", rm.otherResources.techniques, "otherResources", "techniques", C.teal)}
-        ${rmCard("Tools", rm.otherResources.tools, "otherResources", "tools", C.blue)}
-        ${rmCard("My Happy Places", rm.otherResources.happyPlaces, "otherResources", "happyPlaces", C.pink)}
-        ${rmCard("Mentors", rm.otherResources.mentors, "otherResources", "mentors", C.gold)}
-        ${rmCard("Books", rm.otherResources.books, "otherResources", "books", C.orange)}
-        ${rmCard("Activities", rm.otherResources.activities, "otherResources", "activities", C.purple)}
+    <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);
+      border-radius:14px;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:${C.green};text-align:center;
+        margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(16,185,129,.2)">
+        Other Resources
       </div>
+      ${rmCard("Techniques",    rm.otherResources.techniques,  "otherResources","techniques",  C.teal)}
+      ${rmCard("Tools",         rm.otherResources.tools,       "otherResources","tools",       C.blue)}
+      ${rmCard("My Happy Places",rm.otherResources.happyPlaces,"otherResources","happyPlaces", C.pink)}
+      ${rmCard("Mentors",       rm.otherResources.mentors,     "otherResources","mentors",     C.gold)}
+      ${rmCard("Books",         rm.otherResources.books,       "otherResources","books",       C.orange)}
+      ${rmCard("Activities",    rm.otherResources.activities,  "otherResources","activities",  C.purple)}
     </div>
 
   </div>`;
