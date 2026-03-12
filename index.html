@@ -589,10 +589,16 @@ const DEFAULTS = {
 };
 
 // ══════════════════════════════════════════════════════════════
-// SUPABASE CONFIG  — filled in by user during setup
+// SUPABASE CONFIG  — credentials baked in, auto-connects on every browser/device
 // ══════════════════════════════════════════════════════════════
-let SUPABASE_URL = localStorage.getItem("lcc_sb_url") || "";
-let SUPABASE_KEY = localStorage.getItem("lcc_sb_key") || "";
+const SB_DEFAULT_URL = "https://occuuaubqywgjvovemvy.supabase.co";
+const SB_DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jY3V1YXVicXl3Z2p2b3ZlbXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMTg5NjAsImV4cCI6MjA4ODY5NDk2MH0.9avcNATWuk816FMr3_owM24QzXkXBnlTkLsvBXvSDts";
+// Use stored credentials if present, otherwise fall back to baked-in defaults
+let SUPABASE_URL = localStorage.getItem("lcc_sb_url") || SB_DEFAULT_URL;
+let SUPABASE_KEY = localStorage.getItem("lcc_sb_key") || SB_DEFAULT_KEY;
+// Always persist defaults so sbReady is true on every fresh browser
+if(!localStorage.getItem("lcc_sb_url")) localStorage.setItem("lcc_sb_url", SB_DEFAULT_URL);
+if(!localStorage.getItem("lcc_sb_key")) localStorage.setItem("lcc_sb_key", SB_DEFAULT_KEY);
 const SB_TABLE   = "lcc_data";
 const SB_ROW_ID  = "main";
 let   sbReady    = !!(SUPABASE_URL && SUPABASE_KEY);
