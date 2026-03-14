@@ -3642,22 +3642,21 @@ function renderQuestionLoop(){
 // ── UPGRADED TREE MAGNET (sketch style) ───────────────────────
 function renderTreeMagnet(){
   if(!S.treeMagnet2) S.treeMagnet2 = {
-    goal:"", feelings:["","","","","","","","","","","","","","",""],
-    leaves:["","","","","","","","","","","","","","",""],
-    leafDone:[false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],
-    branches:[]
+    goal:"",
+    leaves:Array(15).fill(""),
+    leafDone:Array(15).fill(false),
+    roots:Array(15).fill("")
   };
   const TM = S.treeMagnet2;
-  if(!Array.isArray(TM.feelings)) TM.feelings = Array(15).fill("");
-  if(!Array.isArray(TM.leaves))   TM.leaves   = Array(15).fill("");
-  if(!Array.isArray(TM.leafDone)) TM.leafDone = Array(15).fill(false);
+  if(!Array.isArray(TM.leaves))  TM.leaves  = Array(15).fill("");
+  if(!Array.isArray(TM.leafDone))TM.leafDone= Array(15).fill(false);
+  if(!Array.isArray(TM.roots))   TM.roots   = Array(15).fill("");
 
-  const done2  = TM.leafDone.filter(Boolean).length;
-  const pct2   = Math.round(done2/15*100);
-  const green2 = done2;
+  const doneCt = TM.leafDone.filter(Boolean).length;
+  const pct2   = Math.round(doneCt/15*100);
 
-  // Leaf positions (15) — [cx, cy, rx, ry, rotate]
-  const LP = [
+  // Leaf positions [cx,cy,rx,ry,rot]
+  const LP=[
     [26,172,16,26,-42],[14,210,15,24,-52],[52,150,16,25,-30],
     [36,226,15,23,-44],[82,198,16,26,-24],[62,230,15,23,-36],
     [162,108,15,24,-12],[148,140,14,22,-20],[200,88,17,27,0],
@@ -3665,37 +3664,37 @@ function renderTreeMagnet(){
     [338,230,15,23,36],[350,150,16,25,30],[370,172,16,26,42]
   ];
 
-  // Build goal text lines for heart display
-  const gwords = (TM.goal||"").split(' ').filter(Boolean);
-  const glines = ['','','','','',''];let gli=0;
-  gwords.forEach(w=>{if(gli<5&&(glines[gli]+(glines[gli]?' ':'')+w).length>20)gli++;if(gli<6)glines[gli]+=(glines[gli]?' ':'')+w;});
-
-  const editingLeaf  = window._tm2EditLeaf;
-  const editingRoot  = window._tm2EditRoot;
+  // Goal wraps into heart
+  const gwords=(TM.goal||"").split(" ").filter(Boolean);
+  const gl=["","","","","",""];let gi=0;
+  gwords.forEach(w=>{if(gi<5&&(gl[gi]+(gl[gi]?" ":"")+w).length>20)gi++;if(gi<6)gl[gi]+=(gl[gi]?" ":"")+w;});
 
   return `
-  ${sectionHdr("🌳","Tree Magnetization","Every action grows the tree. Every leaf is a step toward the fruit.")}
+  ${sectionHdr("\u{1F333}","Tree Magnetization","Every action grows the tree. Every leaf is a step toward the fruit.")}
 
-  <div class="card" style="margin-bottom:10px">
-    <div style="font-size:10px;color:var(--gold-dk);letter-spacing:.5px;margin-bottom:4px">✦ TRUNK — YOUR GOAL (tap to edit)</div>
-    ${editingLeaf==="goal" ? `
-      <textarea id="tm2goalInput" style="font-size:13px;min-height:64px;line-height:1.6"
-        data-action="tm2-goal-live" placeholder="Write your full goal or intention here...">${TM.goal||""}</textarea>
-      <button class="btn btn-gold btn-block" style="margin-top:6px" data-action="tm2-goal-save">✓ Done</button>
-    ` : `
-      <div style="font-size:13px;color:${TM.goal?'var(--gold-soft)':'var(--gray-lt)'};font-style:italic;cursor:pointer;padding:8px;
-        border:1px dashed rgba(255,255,255,.1);border-radius:8px;min-height:40px"
-        data-action="tm2-edit-goal">${TM.goal||"Tap to write your goal in the trunk heart..."}</div>
-    `}
+  <!-- PROGRESS -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:9px 14px;
+    border:0.5px solid rgba(16,185,129,.25);border-radius:10px;background:rgba(16,185,129,.06)">
+    <span style="font-size:13px">\u{1F331}</span>
+    <div style="flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden">
+      <div style="height:100%;width:${pct2}%;background:#10B981;border-radius:4px;transition:width .5s"></div>
+    </div>
+    <span style="font-size:14px;font-weight:700;color:#10B981">${pct2}%</span>
+    <span style="font-size:11px;color:var(--gray-lt)">${doneCt}/15 leaves complete</span>
   </div>
 
-  <svg width="100%" viewBox="0 0 400 460" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 10px">
-    <path d="M162,430 C155,400 152,365 153,332 C154,302 162,275 176,254 C184,242 192,234 200,228 C208,234 216,242 224,254 C238,275 246,302 247,332 C248,365 245,400 238,430 Z" fill="#ede8e0" stroke="#555" stroke-width="2" stroke-linejoin="round"/>
+  <!-- TREE SVG — visual only, no interaction -->
+  <svg width="100%" viewBox="0 0 400 455" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 14px;border-radius:12px;background:rgba(255,255,255,.02)">
+    <!-- Trunk -->
+    <path d="M162,430 C155,400 152,365 153,332 C154,302 162,275 176,254 C184,242 192,234 200,228 C208,234 216,242 224,254 C238,275 246,302 247,332 C248,365 245,400 238,430 Z" fill="#ede8e0" stroke="#555" stroke-width="2"/>
     <path d="M182,420 C180,388 179,355 181,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>
     <path d="M218,420 C220,388 221,355 219,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>
-    <path d="M200,415 C200,415 158,378 152,348 C147,324 158,304 172,304 C181,304 190,312 196,322 C198,326 200,332 200,332 C200,332 202,326 204,322 C210,312 219,304 228,304 C242,304 253,324 248,348 C242,378 200,415 200,415 Z" fill="white" stroke="#555" stroke-width="1.8"/>
-    ${TM.goal ? glines.map((l,i)=>`<text x="200" y="${318+i*13}" text-anchor="middle" font-size="8.5" fill="#333" font-family="Georgia,serif" font-style="italic">${l}</text>`).join("") :
-      `<text x="200" y="358" text-anchor="middle" font-size="8" fill="#aaa" font-family="Georgia,serif" font-style="italic">your goal</text>`}
+    <!-- Heart -->
+    <path d="M200,415 C200,415 158,378 152,348 C147,324 158,304 172,304 C181,304 190,312 196,322 C198,326 200,332 200,332 C200,332 202,326 204,322 C210,312 219,304 228,304 C242,304 253,324 248,348 C242,378 200,415 200,415Z" fill="white" stroke="#666" stroke-width="1.8"/>
+    ${TM.goal
+      ? gl.filter(Boolean).map((l,i)=>`<text x="200" y="${316+i*14}" text-anchor="middle" font-size="8.5" fill="#333" font-family="Georgia,serif" font-style="italic">${l}</text>`).join("")
+      : `<text x="200" y="362" text-anchor="middle" font-size="8" fill="#bbb" font-family="Georgia,serif" font-style="italic">your goal here</text>`}
+    <!-- Branches -->
     <path d="M170,340 C150,325 126,308 100,292 C78,278 56,268 34,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>
     <path d="M100,292 C78,270 58,244 40,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
     <path d="M40,216 C28,196 18,174 10,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
@@ -3712,78 +3711,72 @@ function renderTreeMagnet(){
     <path d="M200,260 C204,232 210,204 218,176 C224,154 232,134 242,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
     <path d="M182,176 C174,154 164,132 156,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
     <path d="M218,176 C226,154 236,132 244,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- Ground -->
     <path d="M20,432 Q200,424 380,432" stroke="#999" stroke-width="1.5" fill="none"/>
+    <!-- Roots -->
+    <path d="M172,430 C158,446 140,458 118,468 C100,476 80,480 60,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M118,468 C100,478 82,488 64,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M180,432 C170,450 160,466 152,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M188,434 C182,452 176,470 172,486" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M196,435 C193,454 190,473 188,490" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M200,436 C200,456 200,476 199,492" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M204,435 C207,454 210,473 212,490" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M212,434 C218,452 224,470 228,486" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M220,432 C230,450 240,466 248,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M228,430 C242,446 260,458 282,468 C300,476 320,480 340,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M282,468 C300,478 318,488 336,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- Leaves — colored by done/filled/empty -->
     ${LP.map(([cx,cy,rx,ry,rot],i)=>{
-      const filled = i < green2;
-      const hasText = TM.leaves[i]&&TM.leaves[i].trim();
-      return `<g style="cursor:pointer" data-action="tm2-tap-leaf" data-i="${i}">
-        <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${rot},${cx},${cy})"
-          fill="${filled?"#10B981":hasText?"#f0fdf4":"white"}"
-          stroke="${filled?"#0a8c63":hasText?"#10B981":"#555"}" stroke-width="${hasText?2:1.8}"/>
-        ${hasText?`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
-          font-size="5.5" fill="${filled?"white":"#1a5c38"}" font-family="var(--font-sans)"
-          transform="rotate(${rot},${cx},${cy})">${(TM.leaves[i]||"").substring(0,10)}</text>`:""}
-      </g>`;}).join("")}
+      const done = TM.leafDone[i];
+      const txt  = (TM.leaves[i]||"").trim();
+      const fill = done ? "#10B981" : txt ? "#e8f5e9" : "white";
+      const strk = done ? "#0a8c63" : txt ? "#4caf50" : "#888";
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${rot},${cx},${cy})" fill="${fill}" stroke="${strk}" stroke-width="1.8"/>`;
+    }).join("")}
   </svg>
 
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;
-    border:0.5px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(16,185,129,.06)">
-    <span style="font-size:12px;color:var(--gray-lt)">🌱 Growth</span>
-    <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden">
-      <div style="height:100%;width:${pct2}%;background:#10B981;border-radius:3px;transition:width .5s"></div>
-    </div>
-    <span style="font-size:13px;font-weight:700;color:#10B981">${pct2}%</span>
-    <span style="font-size:11px;color:var(--gray-lt)">${done2}/15 leaves done</span>
+  <!-- TRUNK INPUT -->
+  <div class="card" style="margin-bottom:10px;border-left:4px solid var(--gold)">
+    <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px">\u{1F333} TRUNK — YOUR GOAL / INTENTION</div>
+    <textarea style="font-size:13px;min-height:70px;line-height:1.6;font-style:italic"
+      placeholder="Write your full goal or intention here — it will appear in the heart of the trunk..."
+      data-action="tm2-goal-input">${TM.goal||""}</textarea>
   </div>
 
-  <!-- LEAVES EDITOR -->
-  <div class="card" style="margin-bottom:12px">
-    <div style="font-size:10px;color:var(--gold-dk);letter-spacing:.5px;margin-bottom:8px">🌿 LEAVES — TAP A LEAF ON THE TREE TO EDIT, OR USE FIELDS BELOW</div>
-    ${editingLeaf!==undefined && editingLeaf!=="goal" && editingLeaf>=0 && editingLeaf<=14 ? `
-      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="font-size:10px;color:#10B981;font-weight:700;margin-bottom:6px">EDITING LEAF ${editingLeaf+1}</div>
-        <input id="tm2leafInput" style="font-size:13px;margin-bottom:6px" placeholder="What do you want in this leaf?"
-          data-action="tm2-leaf-live" data-i="${editingLeaf}" value="${(TM.leaves[editingLeaf]||"").replace(/"/g,'&quot;')}"/>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <input type="checkbox" id="tm2leafDone" ${TM.leafDone[editingLeaf]?"checked":""}
-            data-action="tm2-leaf-done" data-i="${editingLeaf}"
-            style="width:15px;height:15px;accent-color:#10B981"/>
-          <label for="tm2leafDone" style="font-size:12px;color:var(--gold-soft)">Mark this leaf complete (turns green)</label>
-        </div>
-        <button class="btn btn-gold btn-block" style="font-size:12px" data-action="tm2-leaf-close">✓ Done editing</button>
-      </div>` : ""}
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+  <!-- LEAVES INPUTS -->
+  <div class="card" style="margin-bottom:10px;border-left:4px solid #10B981">
+    <div style="font-size:10px;color:#10B981;font-weight:700;letter-spacing:1px;margin-bottom:8px">\u{1F33F} LEAVES — 15 THINGS YOU WANT (your desires, actions, intentions)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${TM.leaves.map((l,i)=>`
-        <div style="display:flex;align-items:center;gap:5px;padding:5px 7px;border-radius:6px;cursor:pointer;
-          border:1px solid ${TM.leafDone[i]?"rgba(16,185,129,.4)":l?"rgba(16,185,129,.2)":"rgba(255,255,255,.08)"};
-          background:${TM.leafDone[i]?"rgba(16,185,129,.1)":l?"rgba(16,185,129,.05)":"transparent"}"
-          data-action="tm2-tap-leaf" data-i="${i}">
-          <span style="font-size:9px;color:${TM.leafDone[i]?"#10B981":l?"#10B981":"rgba(255,255,255,.2)"};flex-shrink:0">
-            ${TM.leafDone[i]?"✅":l?"🌿":"○"}
-          </span>
-          <span style="font-size:10px;color:${TM.leafDone[i]?"var(--gray-lt)":l?"var(--gold-soft)":"rgba(255,255,255,.25)"};
-            ${TM.leafDone[i]?"text-decoration:line-through":""};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${l||"leaf "+(i+1)}
-          </span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" ${TM.leafDone[i]?"checked":""}
+            data-action="tm2-leaf-check" data-i="${i}"
+            style="width:14px;height:14px;accent-color:#10B981;flex-shrink:0;cursor:pointer"/>
+          <input style="flex:1;font-size:12px;padding:6px 8px;${TM.leafDone[i]?"opacity:.45;text-decoration:line-through":""}"
+            placeholder="Leaf ${i+1}..."
+            data-action="tm2-leaf-input" data-i="${i}"
+            value="${(l||"").replace(/"/g,"&quot;")}"/>
         </div>`).join("")}
     </div>
   </div>
 
-  <!-- ROOTS EDITOR -->
-  <div class="card" style="margin-bottom:12px">
-    <div style="font-size:10px;color:var(--gold-dk);letter-spacing:.5px;margin-bottom:8px">🌱 ROOTS — 15 FEELING WORDS (how it feels when your goal is real)</div>
+  <!-- ROOTS INPUTS -->
+  <div class="card" style="margin-bottom:12px;border-left:4px solid #8B5CF6">
+    <div style="font-size:10px;color:#8B5CF6;font-weight:700;letter-spacing:1px;margin-bottom:8px">\u{1F331} ROOTS — 15 FEELINGS (how it feels when your intention comes true)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-      ${TM.feelings.map((f,i)=>`
-        <input style="font-size:11px;padding:5px 8px;text-align:center" placeholder="feeling ${i+1}"
-          data-action="tm2-root-live" data-i="${i}" value="${(f||"").replace(/"/g,'&quot;')}"/>`).join("")}
+      ${TM.roots.map((r,i)=>`
+        <input style="font-size:12px;padding:5px 8px;text-align:center"
+          placeholder="Feeling ${i+1}..."
+          data-action="tm2-root-input" data-i="${i}"
+          value="${(r||"").replace(/"/g,"&quot;")}"/>`).join("")}
     </div>
   </div>
 
   <div style="display:flex;gap:8px">
-    <button class="btn btn-outline" style="flex:1;font-size:12px" data-action="tm2-reset-leaves">↺ Reset Completions</button>
+    <button class="btn btn-outline" style="flex:1;font-size:12px" data-action="tm2-reset-leaves">\u{21BA} Reset Completions</button>
     <button style="flex:1;padding:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
       border-radius:8px;color:${C.red};font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif"
-      data-action="tm2-reset-all">🗑 Full Reset</button>
+      data-action="tm2-reset-all">\u{1F5D1} Full Reset</button>
   </div>`;
 }
 
@@ -4601,65 +4594,25 @@ function handleClick(e){
       S.microActions[idx].done = !S.microActions[idx].done;
       save(); render(); break;
 
-    // ── TREE MAGNET 2 HANDLERS ──────────────────────────────
-    case "tm2-edit-goal":
-      window._tm2EditLeaf = "goal"; render(); break;
-    case "tm2-goal-save":
-      window._tm2EditLeaf = undefined; save(); render(); break;
-    case "tm2-tap-leaf":
-      window._tm2EditLeaf = idx; render();
-      setTimeout(()=>{ const el=document.getElementById('tm2leafInput'); if(el){el.focus();el.select();} },80);
-      break;
-    case "tm2-leaf-close":
-      window._tm2EditLeaf = undefined; save(); render(); break;
-    case "tm2-leaf-done":
+    // ── TREE MAGNET HANDLERS ────────────────────────────────
+    case "tm2-leaf-check":
       if(!S.treeMagnet2) break;
       S.treeMagnet2.leafDone[parseInt(el.dataset.i)] = el.checked;
       save(); render(); break;
-    case "tm2-branch":
-      window._tm2Branch = idx; render(); break;
-    case "tm2-add-branch":
-      openCustomModal("🌳 Add Branch",`
-        <label class="lbl">Branch Name (skill area or focus area)</label>
-        <input id="m-tm2b" class="inp" placeholder="e.g. SQL Mastery, Health, Spirituality, Marketing">
-        <div style="display:flex;gap:10px;margin-top:14px">
-          <button class="btn btn-gold" style="flex:1" onclick="
-            const n=g('m-tm2b').value.trim();
-            if(!n){alert('Enter a branch name');return;}
-            S.treeMagnet2.branches.push({name:n,leaves:[]});
-            window._tm2Branch=S.treeMagnet2.branches.length-1;
-            save();closeCustomModal();render();">Add Branch</button>
-          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
-        </div>`); break;
-    case "tm2-leaf":
-      if(!S.treeMagnet2) break;
-      S.treeMagnet2.branches[parseInt(el.dataset.b)].leaves[parseInt(el.dataset.l)].d = el.checked;
-      save(); render(); break;
-    case "tm2-del-leaf":
-      if(confirm("Remove this leaf?")){
-        S.treeMagnet2.branches[parseInt(el.dataset.b)].leaves.splice(parseInt(el.dataset.l),1);
-        save(); render();
-      } break;
-    case "tm2-add-leaf":{
-      const inp=document.getElementById('tm2li');
-      if(inp&&inp.value.trim()){
-        S.treeMagnet2.branches[parseInt(el.dataset.b)].leaves.push({t:inp.value.trim(),d:false});
-        save(); render();
-      } break;}
+
     case "tm2-reset-leaves":
       if(confirm("Reset all leaf completions?")){
         if(!S.treeMagnet2) break;
         S.treeMagnet2.leafDone = Array(15).fill(false);
-        window._tm2EditLeaf = undefined;
         save(); render();
       } break;
+
     case "tm2-reset-all":
-      if(confirm("Full reset — clear all leaves, roots and goal?")){
+      if(confirm("Full reset — clear everything?")){
         S.treeMagnet2 = {
-          goal:"", feelings:Array(15).fill(""),
-          leaves:Array(15).fill(""), leafDone:Array(15).fill(false), branches:[]
+          goal:"", leaves:Array(15).fill(""),
+          leafDone:Array(15).fill(false), roots:Array(15).fill("")
         };
-        window._tm2EditLeaf = undefined;
         save(); render();
       } break;
 
@@ -5431,21 +5384,15 @@ function handleInput(e){
     case "exp-filter-month":
       window._expMonth = el.value;
       render(); break;
-    case "tm2-goal":
+    case "tm2-goal-input":
       if(!S.treeMagnet2) break;
       S.treeMagnet2.goal = el.value; save(); break;
-    case "tm2-goal-live":
-      if(!S.treeMagnet2) break;
-      S.treeMagnet2.goal = el.value; save(); break;
-    case "tm2-leaf-live":
+    case "tm2-leaf-input":
       if(!S.treeMagnet2) break;
       S.treeMagnet2.leaves[parseInt(el.dataset.i)] = el.value; save(); break;
-    case "tm2-root-live":
+    case "tm2-root-input":
       if(!S.treeMagnet2) break;
-      S.treeMagnet2.feelings[parseInt(el.dataset.i)] = el.value; save(); break;
-    case "tm2-feelings":
-      if(!S.treeMagnet2) break;
-      S.treeMagnet2.feelings = el.value; save(); break;
+      S.treeMagnet2.roots[parseInt(el.dataset.i)] = el.value; save(); break;
     case "rm-toggle":{
       const sec=el.dataset.section, sub=el.dataset.sub, i=parseInt(el.dataset.idx);
       if(S.resourceMap&&S.resourceMap[sec]&&S.resourceMap[sec][sub]){
