@@ -3774,10 +3774,32 @@ function renderTreeMagnet(){
       +'</div>';
   }).join('');
 
-  // Build roots grid HTML
+  // Build roots grid HTML - numbered for clarity
   var rootsHtml = D.roots.map(function(r,i){
     var val = (r||'').replace(/"/g,'&quot;');
-    return '<input style="font-size:11px;padding:5px 6px;text-align:center" placeholder="Feeling '+(i+1)+'..." data-action="tm3-root" data-i="'+i+'" value="'+val+'"/>';
+    return '<div style="position:relative">'
+      +'<span style="position:absolute;top:5px;left:7px;font-size:9px;color:rgba(139,92,246,.5);font-weight:700;pointer-events:none">'+(i+1)+'</span>'
+      +'<input style="font-size:12px;padding:5px 8px 5px 18px;text-align:left;width:100%" placeholder="feeling..." data-action="tm3-root" data-i="'+i+'" value="'+val+'"/>'
+      +'</div>';
+  }).join('');
+
+  // Build root SVG text labels — positioned along each root line
+  // 9 main root positions mapped to roots array indices 0-8
+  var rootPositions = [
+    {x:88,  y:476, rot:-15, i:0},
+    {x:152, y:485, rot:-8,  i:1},
+    {x:182, y:492, rot:-3,  i:2},
+    {x:199, y:495, rot:0,   i:3},
+    {x:218, y:492, rot:3,   i:4},
+    {x:248, y:485, rot:8,   i:5},
+    {x:310, y:476, rot:15,  i:6},
+    {x:58,  y:490, rot:-20, i:7},
+    {x:340, y:490, rot:20,  i:8},
+  ];
+  var rootSvgText = rootPositions.map(function(p){
+    var word = (D.roots[p.i]||'').trim();
+    if(!word) return '';
+    return '<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" font-size="7" fill="#8B5CF6" font-family="Georgia,serif" font-style="italic" transform="rotate('+p.rot+','+p.x+','+p.y+')">'+word.replace(/&/g,'&amp;').replace(/</g,'&lt;').substring(0,10)+'</text>';
   }).join('');
 
   return sectionHdr('&#127795;','Tree Magnetization','Every action grows the tree. Every leaf is a step toward the fruit.')
@@ -3789,7 +3811,7 @@ function renderTreeMagnet(){
   +'<span style="font-size:14px;font-weight:700;color:#10B981">'+pct+'%</span>'
   +'<span style="font-size:11px;color:var(--gray-lt)">'+greenCount+'/15</span></div>'
 
-  +'<svg width="100%" viewBox="0 0 400 455" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 12px">'
+  +'<svg width="100%" viewBox="0 0 400 510" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 4px">'
   +'<path d="M162,430 C155,400 152,365 153,332 C154,302 162,275 176,254 C184,242 192,234 200,228 C208,234 216,242 224,254 C238,275 246,302 247,332 C248,365 245,400 238,430 Z" fill="#ede8e0" stroke="#555" stroke-width="2"/>'
   +'<path d="M182,420 C180,388 179,355 181,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>'
   +'<path d="M218,420 C220,388 221,355 219,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>'
@@ -3821,8 +3843,11 @@ function renderTreeMagnet(){
   +'<path d="M220,432 C230,450 240,466 248,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>'
   +'<path d="M228,430 C242,446 260,458 282,468 C300,476 320,480 340,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>'
   +'<path d="M282,468 C300,478 318,488 336,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  +rootSvgText
   +leafSvg
   +'</svg>'
+
+  // Remove the pills display since words now show on the tree itself
 
   +'<div class="card" style="margin-bottom:10px;border-left:4px solid var(--gold)">'
   +'<div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px">TRUNK &mdash; YOUR GOAL</div>'
