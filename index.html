@@ -3514,6 +3514,152 @@ function renderFiles(){
   }`;
 }
 
+// ── TIME BUDGET ────────────────────────────────────────────────
+function renderTimeBudget(){
+  if(!S.timeBudget) S.timeBudget = {
+    areas:[
+      {name:"Oracle DBA Job",    target:40, color:C.blue,   icon:"💼"},
+      {name:"Kudrant Lab",       target:10, color:C.gold,   icon:"🎓"},
+      {name:"DBA Accelerator",   target:6,  color:C.teal,   icon:"📈"},
+      {name:"Rescue+ Consulting",target:4,  color:C.green,  icon:"🔧"},
+      {name:"Poetry Business",   target:6,  color:C.purple, icon:"✍️"},
+      {name:"Health / Exercise", target:4,  color:C.orange, icon:"💪"},
+      {name:"Personal / Family", target:6,  color:C.pink,   icon:"🏡"},
+    ],
+    log:[],
+    deepWork:[]
+  };
+  const TB = S.timeBudget;
+  if(!Array.isArray(TB.log))      TB.log = [];
+  if(!Array.isArray(TB.deepWork)) TB.deepWork = [];
+
+  // Get current week bounds (Mon–Sun)
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate() - (day===0?6:day-1)); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+  const weekKey = mon.toDateString();
+
+  // Sum actual hours this week per area
+  const actual = {};
+  TB.areas.forEach(a => actual[a.name] = 0);
+  TB.log.filter(e => {
+    const d = new Date(e.date);
+    return d >= mon && d <= sun;
+  }).forEach(e => {
+    if(actual[e.area] !== undefined) actual[e.area] += Number(e.hours)||0;
+  });
+
+  // Deep work this week
+  const deepThisWeek = TB.deepWork.filter(d=>{
+    const dt = new Date(d.date); return dt>=mon&&dt<=sun;
+  }).reduce((a,d)=>a+Number(d.hours||0),0);
+
+  // Total hours this week
+  const totalActual  = Object.values(actual).reduce((a,b)=>a+b,0);
+  const totalTarget  = TB.areas.reduce((a,b)=>a+b.target,0);
+  const weekPct      = totalTarget>0?Math.round(totalActual/totalTarget*100):0;
+  const weekCol      = weekPct>=80?C.green:weekPct>=50?C.orange:C.red;
+
+  // Recent log entries
+  const recentLog = TB.log.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
+
+  return `
+  ${sectionHdr("⏱️","Time Budget","What gets scheduled gets done. What gets measured gets improved.")}
+
+  <!-- Week summary -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+    ${statCard("This Week",totalActual.toFixed(1)+"h","of "+totalTarget+"h target",weekCol,weekPct)}
+    ${statCard("Deep Work",deepThisWeek.toFixed(1)+"h","focused hours",C.purple,0)}
+    ${statCard("Week of",mon.toLocaleDateString("en-US",{month:"short",day:"numeric"}),"→ "+sun.toLocaleDateString("en-US",{month:"short",day:"numeric"}),C.teal,0)}
+  </div>
+
+  <!-- Area budget bars -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">📊 Budget vs Actual</div>
+      <button class="btn btn-outline" style="font-size:11px" data-action="tb-edit-targets">✏️ Edit Targets</button>
+    </div>
+    ${TB.areas.map((a,i)=>{
+      const act = actual[a.name]||0;
+      const p   = a.target>0?Math.min(100,Math.round(act/a.target*100)):0;
+      const col = p>=90?C.green:p>=60?C.orange:a.color;
+      const over = act > a.target;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--gold-soft)">${a.icon} ${a.name}</span>
+          <span style="font-size:11px;font-weight:700;color:${over?C.orange:col}">
+            ${act.toFixed(1)}h / ${a.target}h
+            ${over?` <span style="font-size:9px;color:${C.orange}">+${(act-a.target).toFixed(1)}h over</span>`:""}
+          </span>
+        </div>
+        <div style="position:relative;height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${p}%;
+            background:${col};border-radius:5px;transition:width .5s"></div>
+          <div style="position:absolute;left:${Math.round(100*a.target/Math.max(a.target,act+1))}%;
+            top:-2px;height:14px;width:2px;background:rgba(255,255,255,.3)"></div>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>
+
+  <!-- Log hours button -->
+  <button class="btn btn-gold btn-block" style="margin-bottom:12px" data-action="tb-log">+ Log Hours</button>
+
+  <!-- Deep work log -->
+  <button class="btn btn-outline btn-block" style="margin-bottom:14px" data-action="tb-log-deep">⚡ Log Deep Work Session</button>
+
+  <!-- Recent log -->
+  ${recentLog.length>0?`<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin:0">📋 This Week's Log</div>
+      <span style="font-size:11px;color:var(--gray-lt)">${totalActual.toFixed(1)}h logged</span>
+    </div>
+    ${recentLog.filter(e=>{const d=new Date(e.date);return d>=mon&&d<=sun;}).length===0
+      ?`<div style="font-size:11px;color:var(--gray-lt);text-align:center;padding:12px">No hours logged this week yet</div>`
+      :recentLog.filter(e=>{const d=new Date(e.date);return d>=mon&&d<=sun;}).map((e,i)=>{
+        const area = TB.areas.find(a=>a.name===e.area)||{color:C.gold,icon:"⏱️"};
+        return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:11px;color:${area.color};background:${area.color}15;
+            padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0">${area.icon} ${e.area}</span>
+          <span style="font-size:12px;color:var(--gold-soft);flex:1">${e.task||"—"}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold)">${Number(e.hours).toFixed(1)}h</span>
+          <span style="font-size:10px;color:var(--gray-lt)">${new Date(e.date).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</span>
+          <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:10px"
+            data-action="tb-delete-log" data-idx="${TB.log.indexOf(e)}">✕</button>
+        </div>`;}).join("")}
+  </div>`:""}
+
+  <!-- Past weeks summary -->
+  ${(()=>{
+    const pastWeeks = [];
+    for(let w=1;w<=4;w++){
+      const wMon=new Date(mon); wMon.setDate(mon.getDate()-w*7);
+      const wSun=new Date(wMon); wSun.setDate(wMon.getDate()+6);
+      const wLogs=TB.log.filter(e=>{const d=new Date(e.date);return d>=wMon&&d<=wSun;});
+      if(wLogs.length>0){
+        const wTotal=wLogs.reduce((a,e)=>a+Number(e.hours||0),0);
+        const wPct=totalTarget>0?Math.round(wTotal/totalTarget*100):0;
+        pastWeeks.push({label:wMon.toLocaleDateString("en-US",{month:"short",day:"numeric"}),total:wTotal,pct:wPct});
+      }
+    }
+    if(!pastWeeks.length) return "";
+    return `<div class="card">
+      <div class="card-title">📅 Past 4 Weeks</div>
+      ${pastWeeks.map(w=>{
+        const c=w.pct>=80?C.green:w.pct>=50?C.orange:C.red;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:11px;color:var(--gold-dk);width:60px">Wk ${w.label}</span>
+          <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${w.pct}%;background:${c};border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${c}">${w.total.toFixed(1)}h</span>
+          <span style="font-size:10px;color:var(--gray-lt)">${w.pct}%</span>
+        </div>`;}).join("")}
+    </div>`;
+  })()}`;
+}
+
 // ── SECOND BRAIN ───────────────────────────────────────────────
 function renderSecondBrain(){
   if(!S.secondBrain) S.secondBrain = {view:"capture", capture:[], ideas:[], knowledge:[]};
@@ -4165,6 +4311,7 @@ const RENDERS = {
   spending:     renderSpending,
   cashflow:     renderCashFlow,
   networth:     renderNetWorth,
+  timebudget:   renderTimeBudget,
   affirmations: renderAffirmations,
   mission:      renderMission,
   vision:       renderVisionBoard,
@@ -4419,6 +4566,71 @@ function handleClick(e){
     case "exp-filter-type":
     case "exp-filter-month":
       break; // handled in handleInput
+
+    // ── TIME BUDGET HANDLERS ─────────────────────────────────
+    case "tb-log":
+      openCustomModal("⏱️ Log Hours",`
+        <label class="lbl">Area</label>
+        <select id="m-tbarea" class="inp">
+          ${(S.timeBudget&&S.timeBudget.areas||[]).map(a=>`<option value="${a.name}">${a.icon} ${a.name}</option>`).join("")}
+        </select>
+        <label class="lbl">Task / What did you work on?</label>
+        <input id="m-tbtask" class="inp" placeholder="e.g. Recorded SQL lesson 3, Wrote marketing email...">
+        <label class="lbl">Hours</label>
+        <input id="m-tbhrs" class="inp" type="number" min="0.25" max="24" step="0.25" placeholder="e.g. 2.5">
+        <label class="lbl">Date</label>
+        <input id="m-tbdate" class="inp" type="date" value="${new Date().toISOString().split('T')[0]}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const area=g('m-tbarea').value;
+            const task=g('m-tbtask').value.trim();
+            const hrs=parseFloat(g('m-tbhrs').value);
+            const date=g('m-tbdate').value;
+            if(!hrs||isNaN(hrs)){alert('Enter hours');return;}
+            if(!S.timeBudget)S.timeBudget={areas:[],log:[],deepWork:[]};
+            if(!S.timeBudget.log)S.timeBudget.log=[];
+            S.timeBudget.log.unshift({area,task,hours:hrs,date:new Date(date).toDateString()});
+            save();closeCustomModal();render();">Log Hours</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+
+    case "tb-log-deep":
+      openCustomModal("⚡ Log Deep Work",`
+        <div style="font-size:11px;color:var(--gray-lt);margin-bottom:10px;font-style:italic">Deep work = focused, uninterrupted, high-value work. No distractions.</div>
+        <label class="lbl">What did you work on?</label>
+        <input id="m-dwtask" class="inp" placeholder="e.g. Course creation, Writing, SQL prep...">
+        <label class="lbl">Hours of deep work</label>
+        <input id="m-dwhrs" class="inp" type="number" min="0.25" max="12" step="0.25" placeholder="e.g. 2">
+        <label class="lbl">Date</label>
+        <input id="m-dwdate" class="inp" type="date" value="${new Date().toISOString().split('T')[0]}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const hrs=parseFloat(g('m-dwhrs').value);
+            if(!hrs||isNaN(hrs)){alert('Enter hours');return;}
+            if(!S.timeBudget)S.timeBudget={areas:[],log:[],deepWork:[]};
+            if(!S.timeBudget.deepWork)S.timeBudget.deepWork=[];
+            S.timeBudget.deepWork.unshift({task:g('m-dwtask').value.trim(),hours:hrs,date:new Date(g('m-dwdate').value).toDateString()});
+            save();closeCustomModal();render();">Log Deep Work</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+
+    case "tb-delete-log":
+      if(confirm("Remove this log entry?")){
+        S.timeBudget.log.splice(idx,1); save(); render();
+      } break;
+
+    case "tb-edit-targets":
+      openCustomModal("✏️ Edit Weekly Hour Targets",`
+        ${(S.timeBudget&&S.timeBudget.areas||[]).map((a,i)=>`
+          <label class="lbl">${a.icon} ${a.name}</label>
+          <input id="m-tbt${i}" class="inp" type="number" min="0" max="80" step="1" value="${a.target}" placeholder="Hours per week">`).join("")}
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            ${(S.timeBudget&&S.timeBudget.areas||[]).map((a,i)=>`
+              S.timeBudget.areas[${i}].target=parseInt(document.getElementById('m-tbt${i}').value)||${a.target};`).join("")}
+            save();closeCustomModal();render();">Save Targets</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
 
     case "add-expense":{
       const now = new Date();
@@ -5938,6 +6150,7 @@ const TAB_GROUPS = {
     {id:"spending",    icon:"📊", label:"Spending"},
     {id:"cashflow",    icon:"💵", label:"Cash Flow"},
     {id:"networth",    icon:"🏦", label:"Net Worth"},
+    {id:"timebudget",  icon:"⏱️", label:"Time Budget"},
   ],
   grow: [
     {id:"mission",     icon:"🌟", label:"Mission"},
