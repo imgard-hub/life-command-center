@@ -662,11 +662,10 @@ async function pullFromCloud(forceApply = false){
     if(cloudData){
       const cloudTime = cloudData._savedAt || 0;
       const localTime = S._savedAt || 0;
-      // On startup (forceApply=true): ALWAYS use cloud — it is the source of truth across devices
-      // On manual pull: always apply cloud data too
-      // Only skip if cloud is somehow older AND this is a background auto-sync (not startup)
       if(forceApply || cloudTime >= localTime || !S._savedAt){
         S = cloudData;
+        // Run tree migration immediately after loading cloud data
+        migrateTreeMagnet();
         localStorage.setItem("lcc_state", JSON.stringify(S));
         render();
         if(forceApply || cloudTime > localTime) showSyncToast("☁️ Data synced from cloud!");
@@ -678,6 +677,53 @@ async function pullFromCloud(forceApply = false){
     console.warn("Cloud pull failed:", e.message);
   }
 }
+
+// Migrate treeMagnet2 from old branch/feelings format to new leaves/roots format
+function migrateTreeMagnet(){
+  if(!S.treeMagnet2) {
+    S.treeMagnet2 = {goal:"", leaves:Array(15).fill(""), leafDone:Array(15).fill(false), roots:Array(15).fill("")};
+    return;
+  }
+  const TM = S.treeMagnet2;
+  // Fix leaves — old format had branches array with nested leaves
+  if(!Array.isArray(TM.leaves) || TM.leaves.every(l=>l==="")){
+    if(Array.isArray(TM.branches) && TM.branches.length > 0){
+      // Extract all leaf texts from old branches structure
+      const allLeaves = [];
+      TM.branches.forEach(b => { (b.leaves||[]).forEach(l => { if(l.t) allLeaves.push(l.t); }); });
+      TM.leaves = Array(15).fill("").map((_,i) => allLeaves[i]||"");
+      TM.leafDone = Array(15).fill(false);
+    } else {
+      TM.leaves = Array(15).fill("");
+      TM.leafDone = Array(15).fill(false);
+    }
+  }
+  if(!Array.isArray(TM.leafDone)) TM.leafDone = Array(15).fill(false);
+  // Fix roots — old format used 'feelings' key (string or array)
+  if(!Array.isArray(TM.roots)){
+    if(Array.isArray(TM.feelings)){
+      TM.roots = Array(15).fill("").map((_,i) => TM.feelings[i]||"");
+    } else if(typeof TM.feelings === 'string' && TM.feelings.trim()){
+      const parts = TM.feelings.split(/\s*[·,]\s*/).filter(Boolean);
+      TM.roots = Array(15).fill("").map((_,i) => parts[i]||"");
+    } else {
+      TM.roots = Array(15).fill("");
+    }
+  }
+  delete TM.feelings;
+  delete TM.branches;
+  delete TM.view;
+  delete TM.scores;
+  // Ensure exactly 15 slots
+  while(TM.leaves.length   < 15) TM.leaves.push("");
+  while(TM.leafDone.length < 15) TM.leafDone.push(false);
+  while(TM.roots.length    < 15) TM.roots.push("");
+  TM.leaves   = TM.leaves.slice(0,15);
+  TM.leafDone = TM.leafDone.slice(0,15);
+  TM.roots    = TM.roots.slice(0,15);
+  S.treeMagnet2 = TM;
+}
+migrateTreeMagnet(); // Fix any old tree data in localStorage on startup
 
 // Auto-reset daily checkboxes at midnight
 function checkDailyReset(){
@@ -3671,28 +3717,8 @@ function renderQuestionLoop(){
 
 // ── UPGRADED TREE MAGNET (sketch style) ───────────────────────
 function renderTreeMagnet(){
-  if(!S.treeMagnet2) S.treeMagnet2 = {
-    goal:"", leaves:Array(15).fill(""),
-    leafDone:Array(15).fill(false), roots:Array(15).fill("")
-  };
+  migrateTreeMagnet();
   const TM = S.treeMagnet2;
-  // Migrate old format — feelings was a string or had branches array
-  if(!Array.isArray(TM.leaves))   TM.leaves   = Array(15).fill("");
-  if(!Array.isArray(TM.leafDone)) TM.leafDone = Array(15).fill(false);
-  // Migrate roots — old format used 'feelings' (string or array)
-  if(!Array.isArray(TM.roots)){
-    if(Array.isArray(TM.feelings)) TM.roots = TM.feelings.slice(0,15);
-    else if(typeof TM.feelings === 'string' && TM.feelings){
-      // Split old comma/dot separated string into 15 slots
-      const parts = TM.feelings.split(/\s*[·\·,]\s*/).filter(Boolean);
-      TM.roots = Array(15).fill("").map((_,i)=>parts[i]||"");
-    } else TM.roots = Array(15).fill("");
-    delete TM.feelings;
-  }
-  // Ensure exactly 15 slots
-  while(TM.leaves.length   < 15) TM.leaves.push("");
-  while(TM.leafDone.length < 15) TM.leafDone.push(false);
-  while(TM.roots.length    < 15) TM.roots.push("");
 
   const doneCt = TM.leafDone.filter(Boolean).length;
   const pct2   = Math.round(doneCt/15*100);
