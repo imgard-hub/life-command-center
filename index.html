@@ -726,6 +726,36 @@ migrateTreeMagnet(); // Fix any old tree data in localStorage on startup
 function checkDailyReset(){
   const today = new Date().toDateString();
   if(S.lastReset !== today){
+    // ── PRIORITY HISTORY SNAPSHOT ──────────────────────────
+    if(S.lastReset && S.priorities && S.priorities.length > 0){
+      if(!S.priorityHistory) S.priorityHistory = [];
+      const snap = {
+        date: S.lastReset,
+        tasks: S.priorities.map(p=>({
+          text: p.task, time: p.time, level: p.level||"MEDIUM",
+          status: p.done ? "completed" : "missed"
+        })),
+        completed: S.priorities.filter(p=>p.done).length,
+        total: S.priorities.length
+      };
+      S.priorityHistory.unshift(snap);
+      if(S.priorityHistory.length > 35) S.priorityHistory = S.priorityHistory.slice(0,35);
+
+      // Carry forward incomplete tasks with red missed flag
+      S.priorities.forEach(p => {
+        if(!p.done){
+          p.carriedFrom = S.lastReset;
+          p.missed = true;
+        } else {
+          p.done = false;
+          delete p.carriedFrom;
+          delete p.missed;
+        }
+      });
+    } else {
+      S.priorities.forEach(p => { p.done = false; delete p.carriedFrom; delete p.missed; });
+    }
+
     // Snapshot yesterday's schedule BEFORE clearing
     if(S.lastReset && S.schedule && S.schedule.length > 0){
       if(!S.scheduleHistory) S.scheduleHistory = [];
@@ -736,15 +766,21 @@ function checkDailyReset(){
         total: S.schedule.length,
         notes: ""
       };
-      // Keep last 35 days
       S.scheduleHistory.unshift(snap);
       if(S.scheduleHistory.length > 35) S.scheduleHistory = S.scheduleHistory.slice(0,35);
     }
-    S.priorities.forEach(p => p.done = false);
     S.schedule.forEach(s => s.done = false);
     S.wellness.forEach(w => w.done = false);
     S.marketing.forEach(m => m.done = false);
     S.meditation.forEach(m => m.done = false);
+    // Inject any rescheduled tasks for today
+    if(S.rescheduled && S.rescheduled.length > 0){
+      const toAdd = S.rescheduled.filter(r=>r.scheduledFor==="tomorrow");
+      toAdd.forEach(r=>{
+        S.priorities.push({id:Date.now()+Math.random(),task:r.task,time:r.time||"TBD",level:r.level||"MEDIUM",done:false});
+      });
+      S.rescheduled = S.rescheduled.filter(r=>r.scheduledFor!=="tomorrow");
+    }
     S.lastReset = today;
     save();
   }
@@ -956,20 +992,53 @@ function renderDashboard(){
     ${statCard("Revenue",fmtD(totalRev),"of "+fmtD(targetRev),C.orange,pct(totalRev,targetRev))}
   </div>
 
+  ${(()=>{
+    const hist = S.priorityHistory||[];
+    if(!hist.length) return "";
+    const last7 = hist.slice(0,7);
+    const totalTasks = last7.reduce((a,d)=>a+d.total,0);
+    const totalDone  = last7.reduce((a,d)=>a+d.completed,0);
+    const weekPct    = totalTasks>0 ? Math.round(totalDone/totalTasks*100) : 0;
+    const col = weekPct>=80?C.green:weekPct>=50?C.orange:C.red;
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 14px;
+      border:0.5px solid ${col}44;border-radius:10px;background:${col}08">
+      <span style="font-size:11px;color:var(--gray-lt)">📊 7-day completion</span>
+      <div style="flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden">
+        <div style="height:100%;width:${weekPct}%;background:${col};border-radius:3px"></div>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:${col}">${weekPct}%</span>
+      <span style="font-size:10px;color:var(--gray-lt)">${totalDone}/${totalTasks} tasks</span>
+    </div>`;
+  })()}
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     <div class="card">
       <div class="card-title">⭐ Top 3 Today</div>
-      ${S.priorities.map((p,i)=>`
-        <div class="row ${p.done?"done-row":""}" data-action="toggle-priority" data-idx="${i}">
-          <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${LEVEL_COLOR[p.level]};background:${p.done?LEVEL_COLOR[p.level]:"transparent"};display:flex;align-items:center;justify-content:center;font-size:13px;color:white;font-weight:700;flex-shrink:0;transition:all .2s">
-            ${p.done?"✓":i+1}
+      ${S.priorities.map((p,i)=>{
+        const carried = p.missed && p.carriedFrom;
+        const borderCol = carried ? C.red : LEVEL_COLOR[p.level];
+        return `
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div style="width:26px;height:26px;border-radius:50%;border:2px solid ${borderCol};
+            background:${p.done?borderCol:"transparent"};display:flex;align-items:center;
+            justify-content:center;font-size:12px;color:white;font-weight:700;flex-shrink:0;
+            cursor:pointer;transition:all .2s" data-action="toggle-priority" data-idx="${i}">
+            ${p.done?"✓":carried?"!":i+1}
           </div>
           <div style="flex:1;min-width:0">
-            <div class="row-text" style="font-size:11px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.task}</div>
+            ${carried?`<div style="font-size:9px;color:${C.red};font-weight:700;margin-bottom:2px">🔴 FROM ${new Date(p.carriedFrom).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</div>`:""}
+            <div style="font-size:11px;color:${p.done?"var(--gray-lt)":carried?"var(--gold-soft)":"var(--gold-soft)"};
+              text-decoration:${p.done?"line-through":"none"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.task}</div>
             <div style="font-size:9px;color:var(--gray-lt);margin-top:1px">⏰ ${p.time}</div>
+            ${carried && !p.done ? `<div style="display:flex;gap:4px;margin-top:4px">
+              <button style="font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid ${C.green};
+                background:transparent;color:${C.green};cursor:pointer" data-action="complete-carried" data-idx="${i}">✓ Done</button>
+              <button style="font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid ${C.blue};
+                background:transparent;color:${C.blue};cursor:pointer" data-action="reschedule-priority" data-idx="${i}">📅 Tomorrow</button>
+            </div>`:""}
           </div>
-        </div>`).join("")}
-      <button class="btn btn-outline btn-block" data-action="goto" data-goto="priorities">Manage →</button>
+        </div>`;}).join("")}
+      <button class="btn btn-outline btn-block" style="margin-top:8px" data-action="goto" data-goto="priorities">Manage →</button>
     </div>
 
     <div class="card">
@@ -1165,33 +1234,53 @@ function calcMorningStreak(){
 
 // ── PRIORITIES ────────────────────────────────────────────────
 function renderPriorities(){
-  const done = S.priorities.filter(p=>p.done).length;
+  const done    = S.priorities.filter(p=>p.done).length;
+  const carried = S.priorities.filter(p=>p.missed&&p.carriedFrom&&!p.done).length;
+  const hist    = S.priorityHistory||[];
+
   return `
-  ${sectionHdr("⭐","Daily Priorities","Three things. Every morning. Tap to complete. Tap ✏️ to edit.")}
+  ${sectionHdr("⭐","Daily Priorities","Three things. Every morning. Tap to complete.")}
   <div class="stat-grid g3">
-    ${statCard("Done",`${done}`,"completed",C.green,pct(done,3))}
-    ${statCard("Pending",`${3-done}`,"remaining",C.orange,pct(3-done,3))}
-    ${statCard("Total","3","for today",C.gold)}
+    ${statCard("Done",`${done}`,"today",C.green,pct(done,S.priorities.length||3))}
+    ${statCard("Carried",`${carried}`,"from yesterday",C.red,0)}
+    ${statCard("7-day",`${(()=>{const l=hist.slice(0,7);const t=l.reduce((a,d)=>a+d.total,0);const c=l.reduce((a,d)=>a+d.completed,0);return t?Math.round(c/t*100)+'%':'—';})()}`,"completion",C.blue,0)}
   </div>
-  ${S.priorities.map((p,i)=>`
-    <div class="card" style="border-left:4px solid ${LEVEL_COLOR[p.level]};background:${p.done?"rgba(16,185,129,.05)":"rgba(255,255,255,.04)"}">
+
+  ${carried>0?`<div style="padding:10px 14px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);margin-bottom:12px;font-size:12px;color:${C.red}">
+    🔴 ${carried} task${carried>1?"s":""} carried from yesterday. Complete, reschedule, or replace them.
+  </div>`:""}
+
+  ${S.priorities.map((p,i)=>{
+    const isCarried = p.missed && p.carriedFrom && !p.done;
+    const borderCol = isCarried ? C.red : LEVEL_COLOR[p.level];
+    return `
+    <div class="card" style="border-left:4px solid ${borderCol};background:${p.done?"rgba(16,185,129,.05)":isCarried?"rgba(239,68,68,.04)":"rgba(255,255,255,.04)"}">
       <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="width:34px;height:34px;border-radius:50%;border:2px solid ${LEVEL_COLOR[p.level]};
-          background:${p.done?LEVEL_COLOR[p.level]:"transparent"};display:flex;align-items:center;
+        <div style="width:34px;height:34px;border-radius:50%;border:2px solid ${borderCol};
+          background:${p.done?borderCol:"transparent"};display:flex;align-items:center;
           justify-content:center;font-size:15px;color:white;font-weight:700;flex-shrink:0;cursor:pointer;transition:all .2s"
-          data-action="toggle-priority" data-idx="${i}">${p.done?"✓":i+1}</div>
+          data-action="toggle-priority" data-idx="${i}">${p.done?"✓":isCarried?"!":i+1}</div>
         <div style="flex:1">
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap">
-            ${tag(p.level+" PRIORITY",LEVEL_COLOR[p.level])}
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+            ${isCarried?`<span style="font-size:9px;font-weight:700;color:${C.red};background:rgba(239,68,68,.15);padding:2px 8px;border-radius:10px;letter-spacing:.5px">🔴 CARRIED FROM ${new Date(p.carriedFrom).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>`
+            :`${tag(p.level+" PRIORITY",LEVEL_COLOR[p.level])}`}
             <span style="font-size:9px;color:var(--gray-lt)">⏰ ${p.time}</span>
           </div>
           <div style="font-size:14px;font-family:'Cormorant Garamond',serif;color:${p.done?"var(--gold-dk)":"var(--gold-soft)"};
             text-decoration:${p.done?"line-through":"none"};line-height:1.5">${p.task}</div>
+          ${isCarried?`<div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn btn-outline" style="font-size:11px;padding:4px 12px;border-color:${C.green};color:${C.green}"
+              data-action="complete-carried" data-idx="${i}">✅ Mark Done</button>
+            <button class="btn btn-outline" style="font-size:11px;padding:4px 12px;border-color:${C.blue};color:${C.blue}"
+              data-action="reschedule-priority" data-idx="${i}">📅 Reschedule Tomorrow</button>
+            <button class="btn btn-outline" style="font-size:11px;padding:4px 12px;border-color:rgba(255,255,255,.2)"
+              data-action="dismiss-carried" data-idx="${i}">✕ Dismiss</button>
+          </div>`:""}
         </div>
         <button style="background:none;border:none;color:var(--gold-dk);font-size:16px;cursor:pointer;padding:4px"
           data-action="edit-priority" data-idx="${i}">✏️</button>
       </div>
-    </div>`).join("")}
+    </div>`;}).join("")}
 
   <div class="card" style="border:1px dashed rgba(201,168,76,.3)">
     <div class="card-title">+ Add Priority</div>
@@ -1215,7 +1304,46 @@ function renderPriorities(){
         <div style="font-size:10px;color:var(--gold-dk)">Each evening, note your wins and set tomorrow's top 3. Your future self will thank you.</div>
       </div>
     </div>
-  </div>`;
+  </div>
+
+  ${(()=>{
+    const hist = S.priorityHistory||[];
+    if(!hist.length) return "";
+    return `<div class="card" style="margin-top:4px">
+      <div class="card-title">📊 Priority History — Last 7 Days</div>
+      <div style="font-size:10px;color:var(--gray-lt);margin-bottom:10px;font-style:italic">Tap a day to see what you worked on. Feeds into your Weekly Review.</div>
+      ${hist.slice(0,7).map(d=>{
+        const pct2 = d.total>0?Math.round(d.completed/d.total*100):0;
+        const col  = pct2===100?C.green:pct2>=50?C.orange:C.red;
+        return `<div style="margin-bottom:8px;border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+            background:rgba(255,255,255,.02);cursor:pointer"
+            onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--gold-soft)">${d.date}</div>
+              <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">${d.completed}/${d.total} completed</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:50px;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${pct2}%;background:${col};border-radius:3px"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:${col}">${pct2}%</span>
+            </div>
+          </div>
+          <div style="display:none;padding:8px 12px">
+            ${d.tasks.map(t=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+                <span style="font-size:12px">${t.status==="completed"?"✅":"🔴"}</span>
+                <span style="font-size:11px;color:${t.status==="completed"?C.green:"var(--gray-lt)"};
+                  ${t.status==="completed"?"text-decoration:line-through":""}">
+                  ${t.text}
+                </span>
+                <span style="font-size:10px;color:var(--gray-lt);margin-left:auto">⏰ ${t.time||""}</span>
+              </div>`).join("")}
+          </div>
+        </div>`;}).join("")}
+    </div>`;
+  })()}`;
 }
 
 // ── SCHEDULE ─────────────────────────────────────────────────
@@ -2807,7 +2935,52 @@ function renderWeeklyReview(){
       </div>`).join("")}
   </div>`:""}
   ${(()=>{
-    const hist = (S.scheduleHistory||[]).slice(0,7);
+    const hist = (S.priorityHistory||[]).slice(0,7);
+    if(!hist.length) return "";
+    const totalT = hist.reduce((a,d)=>a+d.total,0);
+    const totalC = hist.reduce((a,d)=>a+d.completed,0);
+    const weekPct = totalT>0?Math.round(totalC/totalT*100):0;
+    const col = weekPct>=80?C.green:weekPct>=50?C.orange:C.red;
+    return `<div class="card" style="margin-top:14px;border-left:4px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="card-title" style="margin:0">⭐ Priority History — This Week</div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:700;color:${col}">${weekPct}%</div>
+          <div style="font-size:10px;color:var(--gray-lt)">${totalC}/${totalT} completed</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--gray-lt);margin-bottom:10px;font-style:italic">
+        ${weekPct>=80?"🟢 Strong week — you showed up.":weekPct>=50?"🟡 Solid effort — room to improve.":"🔴 Tough week — what got in the way?"}
+      </div>
+      ${hist.map(d=>{
+        const p2 = d.total>0?Math.round(d.completed/d.total*100):0;
+        const c2 = p2===100?C.green:p2>=50?C.orange:C.red;
+        const missed = d.tasks.filter(t=>t.status==="missed");
+        return `<div style="margin-bottom:8px;border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+            background:rgba(255,255,255,.02);cursor:pointer"
+            onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--gold-soft)">${d.date}</div>
+              <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">
+                ${d.completed}/${d.total} done
+                ${missed.length>0?`<span style="color:${C.red};margin-left:6px">· ${missed.length} missed</span>`:""}
+              </div>
+            </div>
+            <span style="font-size:13px;font-weight:700;color:${c2}">${p2}%</span>
+          </div>
+          <div style="display:none;padding:8px 12px">
+            ${d.tasks.map(t=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+                <span style="font-size:12px">${t.status==="completed"?"✅":"🔴"}</span>
+                <span style="font-size:11px;color:${t.status==="completed"?C.green:"var(--gray-lt)"};
+                  ${t.status==="completed"?"text-decoration:line-through":""}">${t.text}</span>
+                <span style="font-size:10px;color:var(--gray-lt);margin-left:auto">⏰ ${t.time||""}</span>
+              </div>`).join("")}
+          </div>
+        </div>`;}).join("")}
+    </div>`;
+  })()}
     if(!hist.length) return "";
     return `<div class="card" style="margin-top:14px">
       <div class="card-title">📅 Schedule History — Last 7 Days</div>
@@ -4134,6 +4307,28 @@ function handleClick(e){
 
     case "toggle-priority":
       S.priorities[idx].done = !S.priorities[idx].done;
+      if(S.priorities[idx].done){ delete S.priorities[idx].missed; delete S.priorities[idx].carriedFrom; }
+      save(); render(); break;
+
+    case "complete-carried":
+      S.priorities[idx].done = true;
+      delete S.priorities[idx].missed;
+      delete S.priorities[idx].carriedFrom;
+      save(); render(); break;
+
+    case "reschedule-priority": {
+      const task = S.priorities[idx];
+      // Mark dismissed from today, add fresh for tomorrow with a flag
+      if(!S.rescheduled) S.rescheduled = [];
+      S.rescheduled.push({task:task.task, time:task.time, level:task.level, scheduledFor:"tomorrow"});
+      S.priorities.splice(idx,1);
+      showSyncToast("📅 Rescheduled for tomorrow — it will appear in your Top 3 next login.");
+      save(); render(); break;
+    }
+
+    case "dismiss-carried":
+      delete S.priorities[idx].missed;
+      delete S.priorities[idx].carriedFrom;
       save(); render(); break;
 
     case "toggle-schedule":
