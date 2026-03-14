@@ -1065,6 +1065,104 @@ function renderDashboard(){
   </div>`;
 }
 
+// ── MORNING ROUTINE ───────────────────────────────────────────
+function renderMorning(){
+  if(!S.morning) S.morning = {
+    quote:"The way you start your day determines how you live your day.",
+    steps:[
+      {text:"Wake up & drink water",    time:"5 min",  done:false},
+      {text:"Meditation / MAP",         time:"10 min", done:false},
+      {text:"Read affirmations",        time:"5 min",  done:false},
+      {text:"Visualization",            time:"5 min",  done:false},
+      {text:"Daily Manifest entry",     time:"10 min", done:false},
+      {text:"Review Top 3 priorities",  time:"5 min",  done:false},
+      {text:"Move / workout",           time:"20 min", done:false},
+      {text:"Cold shower / get ready",  time:"15 min", done:false},
+    ],
+    notes:"",
+    lastCompleted:""
+  };
+  const M = S.morning;
+  if(!Array.isArray(M.steps)) M.steps = [];
+  const today = new Date().toDateString();
+  const allDone = M.steps.length > 0 && M.steps.every(s=>s.done);
+  const doneCt  = M.steps.filter(s=>s.done).length;
+  const pct2    = M.steps.length ? Math.round(doneCt/M.steps.length*100) : 0;
+
+  // Streak calculation
+  const streak = calcMorningStreak();
+
+  return `
+  ${sectionHdr("🌅","Morning Routine","How you start the day determines how you live it.")}
+
+  <!-- Quote -->
+  <div class="card" style="text-align:center;padding:16px;margin-bottom:14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2)">
+    <div style="font-size:10px;color:var(--gold-dk);letter-spacing:2px;margin-bottom:8px">✦ TODAY'S INTENTION ✦</div>
+    <div style="font-size:13px;color:var(--gold-soft);font-style:italic;line-height:1.6">"${M.quote}"</div>
+    <button class="btn btn-outline" style="margin-top:10px;font-size:11px" data-action="edit-morning-quote">Edit Quote</button>
+  </div>
+
+  <!-- Streak + Progress -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div class="card" style="text-align:center;padding:14px">
+      <div style="font-size:28px;margin-bottom:2px">🔥</div>
+      <div style="font-size:22px;font-weight:700;color:${C.orange}">${streak}</div>
+      <div style="font-size:10px;color:var(--gold-dk);font-weight:700;letter-spacing:.5px">DAY STREAK</div>
+      <div style="font-size:10px;color:var(--gray-lt)">full routine completed</div>
+    </div>
+    <div class="card" style="padding:14px">
+      <div style="font-size:11px;color:var(--gold-dk);font-weight:700;margin-bottom:8px">TODAY'S PROGRESS</div>
+      <div style="font-size:22px;font-weight:700;color:${allDone?C.green:C.gold}">${doneCt}/${M.steps.length}</div>
+      <div style="font-size:10px;color:var(--gray-lt);margin-bottom:8px">steps complete</div>
+      ${bar(pct2, allDone?C.green:C.gold, 8)}
+      ${allDone ? `<div style="font-size:11px;color:${C.green};font-weight:700;margin-top:6px">✅ Routine complete!</div>` : ""}
+    </div>
+  </div>
+
+  <!-- Routine Steps -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin:0">🌅 Steps</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline" style="font-size:11px" data-action="add-morning-step">+ Add</button>
+        <button class="btn btn-outline" style="font-size:11px" data-action="reset-morning">↺ Reset</button>
+      </div>
+    </div>
+    ${M.steps.map((s,i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <input type="checkbox" ${s.done?"checked":""} data-action="toggle-morning-step" data-idx="${i}"
+          style="width:16px;height:16px;accent-color:${C.green};cursor:pointer;flex-shrink:0"/>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:${s.done?"var(--gray-lt)":"var(--gold-soft)"};${s.done?"text-decoration:line-through":""};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.text}</div>
+        </div>
+        <div style="font-size:10px;color:${C.teal};background:rgba(20,184,166,.1);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0">${s.time}</div>
+        <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:11px;flex-shrink:0"
+          onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
+          data-action="delete-morning-step" data-idx="${i}">✕</button>
+      </div>`).join("")}
+  </div>
+
+  <!-- Intentions for today -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📝 Intentions for Today</div>
+    <textarea style="font-size:13px;min-height:80px;line-height:1.6"
+      placeholder="What do I want to feel, create, and experience today?&#10;What is my energy today?&#10;One word for today..."
+      data-action="morning-notes">${M.notes||""}</textarea>
+  </div>`;
+}
+
+function calcMorningStreak(){
+  if(!S.morningStreak) S.morningStreak = [];
+  const today = new Date().toDateString();
+  let streak = 0, check = new Date();
+  for(let i=0; i<60; i++){
+    if(S.morningStreak.includes(check.toDateString())) streak++;
+    else if(i > 0) break;
+    check.setDate(check.getDate()-1);
+  }
+  return streak;
+}
+
 // ── PRIORITIES ────────────────────────────────────────────────
 function renderPriorities(){
   const done = S.priorities.filter(p=>p.done).length;
@@ -3874,6 +3972,7 @@ function renderTreeMagnet(){
 // ══════════════════════════════════════════════════════════════
 const RENDERS = {
   dashboard:    renderDashboard,
+  morning:      renderMorning,
   priorities:   renderPriorities,
   schedule:     renderSchedule,
   wellness:     renderWellness,
@@ -3983,6 +4082,56 @@ function handleClick(e){
   const idx = parseInt(el.dataset.idx);
 
   switch(action){
+    // ── MORNING ROUTINE HANDLERS ─────────────────────────────
+    case "toggle-morning-step": {
+      if(!S.morning||!S.morning.steps) break;
+      S.morning.steps[idx].done = !S.morning.steps[idx].done;
+      // If all done, record streak
+      if(S.morning.steps.every(s=>s.done)){
+        if(!S.morningStreak) S.morningStreak = [];
+        const today = new Date().toDateString();
+        if(!S.morningStreak.includes(today)) S.morningStreak.push(today);
+      }
+      save(); render(); break;
+    }
+    case "reset-morning":
+      if(!S.morning) break;
+      S.morning.steps.forEach(s=>s.done=false);
+      save(); render(); break;
+
+    case "add-morning-step":
+      openCustomModal("🌅 Add Morning Step",`
+        <label class="lbl">Step Name</label>
+        <input id="m-mstep" class="inp" placeholder="e.g. Journal, Read, Stretch...">
+        <label class="lbl">Time</label>
+        <input id="m-mtime" class="inp" placeholder="e.g. 10 min" value="5 min">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const txt=g('m-mstep').value.trim();
+            if(!txt){alert('Enter a step name');return;}
+            if(!S.morning)S.morning={steps:[],notes:'',quote:'',lastCompleted:''};
+            S.morning.steps.push({text:txt,time:g('m-mtime').value.trim()||'5 min',done:false});
+            save();closeCustomModal();render();">Add Step</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+
+    case "delete-morning-step":
+      if(confirm("Remove this step?")){
+        S.morning.steps.splice(idx,1); save(); render();
+      } break;
+
+    case "edit-morning-quote":
+      openCustomModal("✦ Edit Quote",`
+        <label class="lbl">Inspirational Quote / Intention</label>
+        <textarea id="m-mquote" class="inp" rows="3">${(S.morning&&S.morning.quote||"").replace(/</g,"&lt;")}</textarea>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            if(!S.morning)S.morning={steps:[],notes:'',quote:'',lastCompleted:''};
+            S.morning.quote=document.getElementById('m-mquote').value.trim();
+            save();closeCustomModal();render();">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+
     case "toggle-priority":
       S.priorities[idx].done = !S.priorities[idx].done;
       save(); render(); break;
@@ -5539,6 +5688,9 @@ function handleInput(e){
       S.mission[el.dataset.field] = el.value;
       save(); break;
     }
+    case "morning-notes":
+      if(!S.morning) break;
+      S.morning.notes = el.value; save(); break;
     case "review-field": {
       const rfWeek = el.dataset.week;
       const rfField = el.dataset.field;
@@ -5568,6 +5720,7 @@ function handleInput(e){
 const TAB_GROUPS = {
   daily: [
     {id:"dashboard",   icon:"⌂",  label:"Home"},
+    {id:"morning",     icon:"🌅", label:"Morning"},
     {id:"priorities",  icon:"⭐", label:"Priorities"},
     {id:"schedule",    icon:"🕐", label:"Schedule"},
     {id:"wellness",    icon:"🌿", label:"Wellness"},
