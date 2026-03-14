@@ -3741,19 +3741,28 @@ function renderTreeMagnet(){
     var hasVal  = D.leaves[i] && D.leaves[i].trim();
     var fill    = filled ? '#10B981' : (hasVal ? '#e8f5e9' : 'white');
     var stroke  = filled ? '#0a8c63' : (hasVal ? '#4caf50' : '#888');
-    return '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" transform="rotate('+rot+','+cx+','+cy+')" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.8"/>';
+    var txtCol  = filled ? 'white' : '#1a5c38';
+    var shortTxt = hasVal ? D.leaves[i].trim().substring(0,9) : '';
+    var ellipse = '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" transform="rotate('+rot+','+cx+','+cy+')" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.8"/>';
+    var label   = shortTxt ? '<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" font-size="5.5" fill="'+txtCol+'" font-family="Arial,sans-serif" transform="rotate('+rot+','+cx+','+cy+')">'+shortTxt.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</text>' : '';
+    return ellipse + label;
   }).join('');
 
-  // Wrap goal text into heart lines
+  // Wrap goal text into heart — shorter line length to fit inside heart shape
   var gwords = D.goal.split(' ').filter(function(w){return w.length>0;});
   var gl=['','','','','',''], gi=0;
   gwords.forEach(function(w){
-    if(gi<5 && (gl[gi]+(gl[gi]?' ':'')+w).length>20) gi++;
+    if(gi<5 && (gl[gi]+(gl[gi]?' ':'')+w).length>16) gi++;
     if(gi<6) gl[gi]+=(gl[gi]?' ':'')+w;
   });
+  var filledLines = gl.filter(function(l){return l.length>0;});
+  // Center the lines vertically in the heart (heart center ~y=360, each line 13px)
+  var heartCenterY = 355;
+  var lineH = 13;
+  var topY = heartCenterY - Math.floor(filledLines.length/2)*lineH;
   var goalLines = D.goal
-    ? gl.filter(function(l){return l.length>0;}).map(function(l,i){
-        return '<text x="200" y="'+(316+i*14)+'" text-anchor="middle" font-size="8.5" fill="#333" font-family="Georgia,serif" font-style="italic">'+l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</text>';
+    ? filledLines.map(function(l,i){
+        return '<text x="200" y="'+(topY+i*lineH)+'" text-anchor="middle" font-size="8" fill="#333" font-family="Georgia,serif" font-style="italic">'+l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</text>';
       }).join('')
     : '<text x="200" y="362" text-anchor="middle" font-size="8" fill="#bbb" font-family="Georgia,serif" font-style="italic">your goal</text>';
 
