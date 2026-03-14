@@ -1243,7 +1243,7 @@ function renderPriorities(){
   <div class="stat-grid g3">
     ${statCard("Done",`${done}`,"today",C.green,pct(done,S.priorities.length||3))}
     ${statCard("Carried",`${carried}`,"from yesterday",C.red,0)}
-    ${statCard("7-day",`${(()=>{const l=hist.slice(0,7);const t=l.reduce((a,d)=>a+d.total,0);const c=l.reduce((a,d)=>a+d.completed,0);return t?Math.round(c/t*100)+'%':'—';})()}`,"completion",C.blue,0)}
+    ${(()=>{const l=(S.priorityHistory||[]).slice(0,7);const t=l.reduce((a,d)=>a+d.total,0);const c=l.reduce((a,d)=>a+d.completed,0);const w=t?Math.round(c/t*100):null;return statCard("7-day",w!==null?w+"%":"—","completion",C.blue,0);})()}
   </div>
 
   ${carried>0?`<div style="padding:10px 14px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);margin-bottom:12px;font-size:12px;color:${C.red}">
@@ -2981,6 +2981,8 @@ function renderWeeklyReview(){
         </div>`;}).join("")}
     </div>`;
   })()}
+  ${(()=>{
+    const hist = (S.scheduleHistory||[]).slice(0,7);
     if(!hist.length) return "";
     return `<div class="card" style="margin-top:14px">
       <div class="card-title">📅 Schedule History — Last 7 Days</div>
