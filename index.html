@@ -989,6 +989,36 @@ function renderDashboard(){
     <div style="font-size:9px;color:var(--gold-dk);letter-spacing:3px;margin-bottom:12px">✦ TODAY'S AFFIRMATION ✦</div>
     <div class="aff-text">"${todayAff}"</div>
     <button class="btn btn-primary" data-action="next-aff">Next Affirmation →</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+    <div class="card" style="border-left:4px solid ${C.purple};text-align:center;padding:16px 12px">
+      <div style="font-size:28px;margin-bottom:4px">🔥</div>
+      <div style="font-size:26px;font-weight:700;color:${C.purple};font-family:'Cormorant Garamond',serif">${calcManifestStreak()}</div>
+      <div style="font-size:11px;color:var(--gold-dk);font-weight:700;letter-spacing:.5px;margin:2px 0">DAY STREAK</div>
+      <div style="font-size:10px;color:var(--gray-lt)">Manifesting daily</div>
+      <button class="btn btn-outline btn-block" style="margin-top:10px;font-size:11px" data-action="goto" data-goto="dailymanifest">Open Manifest →</button>
+    </div>
+    <div class="card" style="border-left:4px solid ${C.orange}">
+      <div class="card-title">⚡ Today's Micro Action</div>
+      ${(()=>{
+        const today = new Date().toDateString();
+        const todayActs = (S.microActions||[]).filter(a=>a.date===today);
+        if(!todayActs.length) return `
+          <div style="font-size:11px;color:var(--gray-lt);font-style:italic;text-align:center;padding:10px 0">
+            No micro action set yet today
+          </div>
+          <button class="btn btn-outline btn-block" style="font-size:11px" data-action="goto" data-goto="microaction">Add One →</button>`;
+        return todayActs.map((a,i) => {
+          const gi = (S.microActions||[]).indexOf(a);
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+            <input type="checkbox" ${a.done?"checked":""} data-action="ma-toggle" data-idx="${gi}"
+              style="width:15px;height:15px;accent-color:${C.green};cursor:pointer;flex-shrink:0"/>
+            <span style="font-size:12px;color:var(--gold-soft);flex:1;${a.done?"text-decoration:line-through;opacity:.4":""}">${a.text}</span>
+          </div>`;
+        }).join("") + `<button class="btn btn-outline btn-block" style="margin-top:8px;font-size:11px" data-action="goto" data-goto="microaction">Manage →</button>`;
+      })()}
+    </div>
   </div>`;
 }
 
@@ -4883,8 +4913,18 @@ function handleClick(e){
     case "delete-marketing-post":
       S.marketing.splice(idx,1); save(); render(); break;
 
-    case "goto":
-      switchTab(el.dataset.goto||"dashboard"); break;
+    case "goto": {
+      const dest = el.dataset.goto||"dashboard";
+      // Find which group this tab belongs to
+      for(const [grp, tabs] of Object.entries(TAB_GROUPS)){
+        if(tabs.find(t=>t.id===dest)){
+          switchGroup(grp);
+          switchTab(dest);
+          break;
+        }
+      }
+      break;
+    }
 
     // ── NEW MODULE HANDLERS ──
     case "toggle-bucket":
