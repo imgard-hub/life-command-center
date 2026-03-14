@@ -683,6 +683,20 @@ async function pullFromCloud(forceApply = false){
 function checkDailyReset(){
   const today = new Date().toDateString();
   if(S.lastReset !== today){
+    // Snapshot yesterday's schedule BEFORE clearing
+    if(S.lastReset && S.schedule && S.schedule.length > 0){
+      if(!S.scheduleHistory) S.scheduleHistory = [];
+      const snap = {
+        date: S.lastReset,
+        items: S.schedule.map(s=>({text:s.text||s.time||"",time:s.time||"",done:!!s.done})),
+        completed: S.schedule.filter(s=>s.done).length,
+        total: S.schedule.length,
+        notes: ""
+      };
+      // Keep last 35 days
+      S.scheduleHistory.unshift(snap);
+      if(S.scheduleHistory.length > 35) S.scheduleHistory = S.scheduleHistory.slice(0,35);
+    }
     S.priorities.forEach(p => p.done = false);
     S.schedule.forEach(s => s.done = false);
     S.wellness.forEach(w => w.done = false);
@@ -2620,8 +2634,45 @@ function renderWeeklyReview(){
         ${r.wins?`<div style="font-size:11px;color:${C.green};margin-top:3px">🏆 ${r.wins.substring(0,90)}${r.wins.length>90?"...":""}</div>`:""}
         ${r.intentions?`<div style="font-size:10px;color:var(--gold-dk);margin-top:2px;font-style:italic">→ ${r.intentions.substring(0,80)}...</div>`:""}
       </div>`).join("")}
-  </div>`:""}`;
-}
+  </div>`:""}
+  ${(()=>{
+    const hist = (S.scheduleHistory||[]).slice(0,7);
+    if(!hist.length) return "";
+    return `<div class="card" style="margin-top:14px">
+      <div class="card-title">📅 Schedule History — Last 7 Days</div>
+      <div style="font-size:10px;color:var(--gray-lt);margin-bottom:10px;font-style:italic">Auto-captured each day at midnight. Use this to review your load, completion rate, and planning.</div>
+      ${hist.map(d=>{
+        const pct2 = d.total>0?Math.round(d.completed/d.total*100):0;
+        const col = pct2>=80?C.green:pct2>=50?C.orange:C.red;
+        return `<div style="margin-bottom:12px;border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);cursor:pointer"
+            onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--gold-soft)">${d.date}</div>
+              <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">${d.completed}/${d.total} completed · ${pct2}%</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:60px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${pct2}%;background:${col};border-radius:3px"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:${col}">${pct2}%</span>
+            </div>
+          </div>
+          <div style="display:none;padding:10px 12px">
+            ${d.items.map(it=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+                <span style="font-size:13px">${it.done?"✅":"⬜"}</span>
+                <span style="font-size:11px;color:${it.done?C.green:"var(--gray-lt)"};${it.done?"":"opacity:.7"}">${it.time?it.time+" — ":""}${it.text}</span>
+              </div>`).join("")}
+            <div style="margin-top:8px">
+              <div style="font-size:10px;color:var(--gold-dk);margin-bottom:4px">Notes / Adjustments</div>
+              <textarea style="font-size:11px;min-height:50px;line-height:1.5" placeholder="What would you adjust? Load too heavy? Too light?"
+                data-action="sch-hist-note" data-date="${d.date}">${d.notes||""}</textarea>
+            </div>
+          </div>
+        </div>`;}).join("")}
+    </div>`;
+  })()}`;}
 
 function getWeekLabel(){
   const d=new Date(); const start=new Date(d);
@@ -3288,193 +3339,447 @@ function renderSecondBrain(){
       </div>`;}).join("")}`;
 }
 
-// ── TREE MAGNETIZATION ─────────────────────────────────────────
-function renderTreeMagnet(){
-  if(!S.treeMagnet) S.treeMagnet = {
-    view: "tree",
-    goals: [
-      {
-        id:1, goal:"$50K Monthly Income",
-        roots:["I create real value for my students","I am worthy of financial abundance","My skills and knowledge are highly valuable"],
-        trunk:"Build a $50K/month recurring income through education and consulting",
-        branches:["Kudrant Lab Membership","DBA Accelerator Program","Database Consulting (Rescue+)","Poetry Business"],
-        leaves:["Record SQL lessons weekly","Post marketing content daily","Nurture Kudrant Lab community","Close consulting clients"],
-        fruit:["$50K/month recurring revenue","100+ Kudrant Lab members","Thriving student community","Financial freedom"],
-        energy:[]
-      },
-      {
-        id:2, goal:"Kudrant Lab Growth",
-        roots:["I help DBAs level up their careers","Community builds faster together","My experience is worth sharing"],
-        trunk:"Build the #1 Oracle DBA community and membership platform",
-        branches:["Monthly membership content","Live Q&A sessions","DBA resource library","Student success stories"],
-        leaves:["Create weekly training videos","Host monthly live sessions","Build troubleshooting guides","Engage members daily"],
-        fruit:["Thriving paid community","Recurring monthly income","Student career transformations","Industry authority"],
-        energy:[]
-      },
-      {
-        id:3, goal:"Poetry Business",
-        roots:["My words heal and inspire","Poetry is my soul's language","Creative work has great value"],
-        trunk:"Publish and monetize my poetry collection",
-        branches:["Quantum Awakening","Soul Project","Grief of Her","Future collections"],
-        leaves:["Write new poems weekly","Edit and refine manuscripts","Market poetry on social media","Connect with poetry community"],
-        fruit:["Published poetry books","Loyal reader community","Passive income from books","Artistic legacy"],
-        energy:[]
-      },
-    ],
-    scores: []
-  };
+// ── DAILY MANIFEST ─────────────────────────────────────────────
+function renderDailyManifest(){
+  if(!S.manifestLog) S.manifestLog = [];
+  const today = new Date().toDateString();
+  let entry = S.manifestLog.find(e=>e.date===today);
+  if(!entry){ entry={date:today,goal:"",affirmation:"",visualization:"",action:"",powerq:"",g1:"",g2:"",g3:"",saved:false}; }
+  const streak = calcManifestStreak();
+  return `
+  ${sectionHdr("🌟","Daily Manifest","Start every day with intention.")}
+  <div class="card" style="text-align:center;margin-bottom:14px;background:rgba(201,168,76,.07)">
+    <div style="font-size:28px;margin-bottom:4px">🔥</div>
+    <div style="font-size:22px;font-weight:700;color:var(--gold)">${streak} day${streak===1?"":"s"}</div>
+    <div style="font-size:11px;color:var(--gold-dk)">manifesting streak</div>
+  </div>
+  ${[
+    {k:"goal",         label:"Today's Goal",            ph:"What is the ONE thing I am calling in today?"},
+    {k:"affirmation",  label:"Today's Affirmation",     ph:"I am... / I have... / I create..."},
+    {k:"visualization",label:"Visualization Notes",     ph:"What did I see, feel, experience in my visualization?"},
+    {k:"action",       label:"One Aligned Action",      ph:"The single most aligned action I will take today..."},
+    {k:"powerq",       label:"Power Question for Today",ph:"What would it take for _____ to happen today?"},
+  ].map(f=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.5px;margin-bottom:6px">${f.label.toUpperCase()}</div>
+      <textarea style="font-size:13px;min-height:64px;line-height:1.6" placeholder="${f.ph}"
+        data-action="manifest-field" data-field="${f.k}" data-date="${today}">${entry[f.k]||""}</textarea>
+    </div>`).join("")}
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.5px;margin-bottom:8px">GRATITUDE — 3 THINGS</div>
+    ${["g1","g2","g3"].map((k,i)=>`
+      <input style="margin-bottom:6px;font-size:13px" placeholder="I am grateful for ${i+1}..."
+        data-action="manifest-field" data-field="${k}" data-date="${today}" value="${entry[k]||""}"/>`).join("")}
+  </div>
+  <button class="btn btn-gold btn-block" data-action="save-manifest" data-date="${today}">💾 Save Daily Manifest</button>
+  ${S.manifestLog.length>1?`
+  <div class="card" style="margin-top:14px">
+    <div class="card-title">📚 Manifest History (${S.manifestLog.length} days)</div>
+    ${S.manifestLog.slice().reverse().slice(0,7).map(e=>`
+      <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:11px;color:var(--gold);font-weight:700">${e.date}</div>
+        ${e.goal?`<div style="font-size:11px;color:var(--gold-soft);margin-top:2px">${e.goal.substring(0,80)}</div>`:""}
+        ${e.action?`<div style="font-size:10px;color:var(--gray-lt);margin-top:2px">→ ${e.action.substring(0,70)}</div>`:""}
+      </div>`).join("")}
+  </div>`:""}`;
+}
 
-  const TM = S.treeMagnet;
-  const v = TM.view||"tree";
-
-  function viewBtn(id, label, active){
-    return `<button style="flex:1;padding:9px 4px;background:${active?C.green:"rgba(255,255,255,.04)"};
-      border:1px solid ${active?"transparent":"rgba(255,255,255,.1)"};border-radius:8px;
-      color:${active?"#0D1B2A":"var(--gold-soft)"};font-size:11px;font-weight:700;
-      font-family:Montserrat,sans-serif;cursor:pointer"
-      data-action="tm-view" data-view="${id}">${label}</button>`;
+function calcManifestStreak(){
+  if(!S.manifestLog||!S.manifestLog.length) return 0;
+  const saved = S.manifestLog.filter(e=>e.saved).map(e=>new Date(e.date).toDateString()).sort().reverse();
+  if(!saved.length) return 0;
+  let streak=0, check=new Date();
+  for(let i=0;i<60;i++){
+    if(saved.includes(check.toDateString())) streak++;
+    else if(i>0) break;
+    check.setDate(check.getDate()-1);
   }
+  return streak;
+}
 
-  // ── TREE VISION view ──
-  if(v === "tree"){
-    const sel = window._tmSelGoal !== undefined ? window._tmSelGoal : null;
-    return `
-    ${sectionHdr("🌳","Tree Magnetization","Every goal grows from belief to fruit.")}
-    <div style="display:flex;gap:6px;margin-bottom:16px">
-      ${viewBtn("tree","🌳 Tree Vision",true)}
-      ${viewBtn("energy","⚡ Energy Meter",false)}
+// ── LIVING IN THE END ──────────────────────────────────────────
+function renderLivingInEnd(){
+  if(!S.livingInEnd) S.livingInEnd = {goals:[], reminder:false};
+  const L = S.livingInEnd;
+  return `
+  ${sectionHdr("🧠","Living in the End","Assume the feeling of your wish fulfilled — now.")}
+  <div class="card" style="margin-bottom:12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2)">
+    <div style="font-size:11px;color:#8B5CF6;font-weight:700;margin-bottom:6px">THE PRINCIPLE</div>
+    <div style="font-size:12px;color:var(--gold-soft);line-height:1.6;font-style:italic">"Live in the end. Act as if it is already done. Feel the feelings of the person who already has what you want."</div>
+  </div>
+  <button class="btn btn-gold btn-block" style="margin-bottom:12px" data-action="lie-add">+ Add a Goal State</button>
+  ${L.goals.length===0?`<div class="card" style="text-align:center;padding:30px;border:1px dashed rgba(255,255,255,.1)">
+    <div style="font-size:11px;color:var(--gray-lt)">No goal states yet. Add one above.</div>
+  </div>`:L.goals.map((g,i)=>`
+    <div class="card" style="margin-bottom:10px;border-left:3px solid #8B5CF6">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold-soft);flex:1">${g.statement||"Goal state"}</div>
+        <button style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:11px"
+          data-action="lie-delete" data-idx="${i}">✕</button>
+      </div>
+      <div style="font-size:11px;color:#8B5CF6;font-style:italic">Emotion: ${g.emotion||"—"}</div>
+      ${g.reminder?`<div style="font-size:10px;color:var(--gold-dk);margin-top:4px">🔔 Daily reminder on</div>`:""}
+    </div>`).join("")}`;
+}
+
+// ── VISUALIZATION ──────────────────────────────────────────────
+function renderVisualization(){
+  if(!S.visualizations) S.visualizations = [];
+  if(!window._vizTimer) window._vizTimer = {running:false,seconds:120};
+  const mins = Math.floor(window._vizTimer.seconds/60);
+  const secs = window._vizTimer.seconds%60;
+  return `
+  ${sectionHdr("🎥","Visualization","See it. Feel it. Believe it. Receive it.")}
+  <div class="card" style="text-align:center;margin-bottom:14px">
+    <div style="font-size:11px;color:var(--gold-dk);letter-spacing:1px;margin-bottom:10px">2-MINUTE VISUALIZATION TIMER</div>
+    <div style="font-size:52px;font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif;margin-bottom:12px" id="vizClock">
+      ${mins}:${String(secs).padStart(2,"0")}
     </div>
-    <button class="btn btn-outline btn-block" style="margin-bottom:14px" data-action="tm-add-goal">+ Add Goal Tree</button>
-    ${TM.goals.map((g,gi)=>{
-      const isOpen = sel === gi;
-      const PARTS = [
-        {key:"fruit",    emoji:"🍎", label:"FRUIT — Results",    color:C.orange,  items:g.fruit},
-        {key:"leaves",   emoji:"🌿", label:"LEAVES — Actions",   color:C.green,   items:g.leaves},
-        {key:"branches", emoji:"🌿", label:"BRANCHES — Projects",color:C.teal,    items:g.branches},
-        {key:"trunk",    emoji:"🌳", label:"TRUNK — Core Goal",  color:C.gold,    items:[g.trunk]},
-        {key:"roots",    emoji:"🌱", label:"ROOTS — Beliefs",    color:C.purple,  items:g.roots},
-      ];
-      return `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;
-          background:rgba(255,255,255,.03)" data-action="tm-toggle-goal" data-idx="${gi}">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--gold)">${g.goal}</div>
-            <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">
-              ${g.branches.length} branches · ${g.leaves.length} actions · ${g.fruit.length} fruits
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <button style="background:none;border:none;color:var(--gold-dk);font-size:11px;cursor:pointer"
-              data-action="tm-edit-goal" data-idx="${gi}">✏️</button>
-            <span style="color:var(--gold-dk);font-size:14px;transition:transform .3s;
-              transform:rotate(${isOpen?180:0}deg)">▼</span>
-          </div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn btn-gold" style="flex:1" data-action="viz-start">▶ Start</button>
+      <button class="btn btn-outline" style="flex:1" data-action="viz-reset">↺ Reset</button>
+    </div>
+  </div>
+  <button class="btn btn-gold btn-block" style="margin-bottom:12px" data-action="viz-add">+ Save a Visualization</button>
+  ${S.visualizations.length===0?`<div class="card" style="text-align:center;padding:24px;border:1px dashed rgba(255,255,255,.1)">
+    <div style="font-size:11px;color:var(--gray-lt)">No visualizations saved yet.</div>
+  </div>`:S.visualizations.map((v,i)=>`
+    <div class="card" style="margin-bottom:10px;border-left:3px solid ${C.teal}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--gold-soft);margin-bottom:4px">${v.scene||"Scene"}</div>
+          ${v.emotions?`<div style="font-size:11px;color:${C.teal}">Emotions: ${v.emotions}</div>`:""}
+          <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">${v.date||""}</div>
         </div>
-        ${isOpen ? `
-        <div style="padding:0 14px 14px">
-          ${PARTS.map(p=>`
-            <div style="margin-top:10px">
-              <div style="font-size:9px;font-weight:700;color:${p.color};letter-spacing:2px;
-                margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-                <span>${p.emoji} ${p.label}</span>
-                ${p.key!=="trunk"?`<button style="background:none;border:none;color:${p.color};
-                  font-size:10px;cursor:pointer;font-family:Montserrat,sans-serif"
-                  data-action="tm-add-part" data-gidx="${gi}" data-part="${p.key}">+ Add</button>`:""}
-              </div>
-              <div style="background:${p.color}0d;border:1px solid ${p.color}22;border-radius:8px;padding:10px">
-                ${p.key==="trunk"?`
-                  <div style="font-size:12px;color:var(--gold-soft);font-weight:600;text-align:center">
-                    ${g.trunk||"Set your core goal"}
-                  </div>`:
-                  (p.items||[]).map((item,ii)=>`
-                    <div style="display:flex;align-items:center;gap:8px;padding:3px 0;
-                      border-bottom:1px solid rgba(255,255,255,.04)">
-                      <span style="font-size:10px;color:${p.color};flex-shrink:0">◆</span>
-                      <span style="font-size:12px;color:var(--gold-soft);flex:1">${item}</span>
-                      <button style="background:none;border:none;color:rgba(255,255,255,.15);
-                        font-size:10px;cursor:pointer" data-action="tm-delete-part"
-                        data-gidx="${gi}" data-part="${p.key}" data-pidx="${ii}">✕</button>
-                    </div>`).join("")}
-              </div>
-            </div>`).join("")}
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="btn btn-outline" style="flex:1;font-size:11px" data-action="tm-view-energy" data-gidx="${gi}">
-              ⚡ Check Energy
-            </button>
-            <button style="flex:1;padding:9px;background:${C.red}18;border:1px solid ${C.red}33;
-              border-radius:8px;color:${C.red};font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif"
-              data-action="tm-delete-goal" data-idx="${gi}">🗑 Remove Tree</button>
-          </div>
-        </div>` : ""}
-      </div>`;}).join("")}`;
-  }
+        <button style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:11px"
+          data-action="viz-delete" data-idx="${i}">✕</button>
+      </div>
+    </div>`).join("")}`;
+}
 
-  // ── ENERGY METER view ──
-  const focusGoal = window._tmEnergyGoal !== undefined ? window._tmEnergyGoal : null;
-  const DRIVERS = [
-    {key:"clarity",   label:"Vision Clarity",       desc:"How clear is this goal?",         color:C.blue},
-    {key:"alignment", label:"Emotional Alignment",   desc:"How excited / certain do you feel?",color:C.purple},
-    {key:"momentum",  label:"Action Momentum",       desc:"Are you consistently taking action?",color:C.green},
-    {key:"belief",    label:"Belief Strength",       desc:"Do you truly believe it's possible?",color:C.gold},
+// ── IDENTITY SHIFT ─────────────────────────────────────────────
+function renderIdentityShift(){
+  if(!S.identityShift) S.identityShift = {entries:[]};
+  const IS = S.identityShift;
+  return `
+  ${sectionHdr("🪞","Identity Shift","Who is the version of you that already has this?")}
+  <div class="card" style="margin-bottom:12px;background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2)">
+    <div style="font-size:12px;color:var(--gold-soft);line-height:1.6;font-style:italic">"You do not rise to the level of your goals. You fall to the level of your identity. Shift the identity first."</div>
+  </div>
+  <button class="btn btn-gold btn-block" style="margin-bottom:12px" data-action="id-add">+ Add an Identity Entry</button>
+  ${IS.entries.length===0?`<div class="card" style="text-align:center;padding:28px;border:1px dashed rgba(255,255,255,.1)">
+    <div style="font-size:11px;color:var(--gray-lt)">Start defining who your future self already is.</div>
+  </div>`:IS.entries.map((e,i)=>`
+    <div class="card" style="margin-bottom:10px;border-left:3px solid ${C.pink}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold)">${e.goal||"Goal"}</div>
+        <button style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:11px"
+          data-action="id-delete" data-idx="${i}">✕</button>
+      </div>
+      ${e.think?`<div style="font-size:11px;color:var(--gold-soft);margin-bottom:4px">💭 <b>How they think:</b> ${e.think}</div>`:""}
+      ${e.study?`<div style="font-size:11px;color:var(--gold-soft);margin-bottom:4px">📚 <b>How they study:</b> ${e.study}</div>`:""}
+      ${e.act?`<div style="font-size:11px;color:var(--gold-soft)">⚡ <b>How they act:</b> ${e.act}</div>`:""}
+    </div>`).join("")}`;
+}
+
+// ── GRATITUDE ──────────────────────────────────────────────────
+function renderGratitude(){
+  if(!S.gratitudeLog) S.gratitudeLog = [];
+  const today = new Date().toDateString();
+  let entry = S.gratitudeLog.find(e=>e.date===today)||{date:today,g1:"",g2:"",g3:""};
+  return `
+  ${sectionHdr("🙏","Gratitude Amplification","What you appreciate, appreciates.")}
+  <div class="card" style="margin-bottom:14px">
+    <div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.5px;margin-bottom:10px">TODAY — ${today}</div>
+    ${["g1","g2","g3"].map((k,i)=>`
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;color:var(--gold-dk);margin-bottom:4px">GRATITUDE ${i+1}</div>
+        <textarea style="font-size:13px;min-height:56px" placeholder="I am grateful for..."
+          data-action="grat-field" data-field="${k}" data-date="${today}">${entry[k]||""}</textarea>
+      </div>`).join("")}
+    <button class="btn btn-gold btn-block" data-action="save-gratitude" data-date="${today}">💾 Save Gratitude</button>
+  </div>
+  ${S.gratitudeLog.length>1?`<div class="card">
+    <div class="card-title">📚 Gratitude History (${S.gratitudeLog.length} days)</div>
+    ${S.gratitudeLog.slice().reverse().slice(0,10).map(e=>`
+      <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:10px;color:var(--gold-dk);margin-bottom:4px">${e.date}</div>
+        ${[e.g1,e.g2,e.g3].filter(Boolean).map(g=>`
+          <div style="font-size:11px;color:var(--gold-soft);padding:2px 0">🙏 ${g.substring(0,80)}</div>`).join("")}
+      </div>`).join("")}
+  </div>`:""}`;
+}
+
+// ── EMOTIONAL CLEARING ─────────────────────────────────────────
+function renderEmotClear(){
+  if(!S.emotClear) S.emotClear = [];
+  return `
+  ${sectionHdr("🧹","Emotional Clearing","Release the block. Replace with truth.")}
+  <button class="btn btn-gold btn-block" style="margin-bottom:12px" data-action="ec-add">+ Add a Clearing</button>
+  ${S.emotClear.length===0?`<div class="card" style="text-align:center;padding:28px;border:1px dashed rgba(255,255,255,.1)">
+    <div style="font-size:32px;margin-bottom:8px">🧹</div>
+    <div style="font-size:11px;color:var(--gray-lt)">No clearings yet. Identify a block and replace it with truth.</div>
+  </div>`:S.emotClear.map((e,i)=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold)">${e.goal||"Goal"}</div>
+        <button style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:11px"
+          data-action="ec-delete" data-idx="${i}">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px">
+          <div style="font-size:9px;color:${C.red};font-weight:700;letter-spacing:1px;margin-bottom:4px">LIMITING BELIEF</div>
+          <div style="font-size:11px;color:var(--gold-soft);line-height:1.5">${e.limit||"—"}</div>
+        </div>
+        <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px">
+          <div style="font-size:9px;color:${C.green};font-weight:700;letter-spacing:1px;margin-bottom:4px">REPLACEMENT TRUTH</div>
+          <div style="font-size:11px;color:var(--gold-soft);line-height:1.5">${e.replace||"—"}</div>
+        </div>
+      </div>
+    </div>`).join("")}`;
+}
+
+// ── MICRO ACTION ───────────────────────────────────────────────
+function renderMicroAction(){
+  if(!S.microActions) S.microActions = [];
+  const today = new Date().toDateString();
+  const todayActions = S.microActions.filter(a=>a.date===today);
+  return `
+  ${sectionHdr("⚡","Micro Aligned Action","One small action your future self would take today.")}
+  <div class="card" style="margin-bottom:12px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2)">
+    <div style="font-size:12px;color:var(--gold-soft);font-style:italic;line-height:1.6">"You don't have to take massive action. Just one aligned action. Every day. That's the compound effect."</div>
+  </div>
+  <button class="btn btn-gold btn-block" style="margin-bottom:14px" data-action="ma-add">+ Add Today's Micro Action</button>
+  ${todayActions.length>0?`<div class="card" style="margin-bottom:12px">
+    <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px">TODAY — ${today}</div>
+    ${todayActions.map(a=>{
+      const globalIdx = S.microActions.indexOf(a);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <input type="checkbox" ${a.done?"checked":""} data-action="ma-toggle" data-idx="${globalIdx}"
+          style="width:16px;height:16px;accent-color:${C.green};cursor:pointer;flex-shrink:0"/>
+        <span style="font-size:13px;color:var(--gold-soft);flex:1;${a.done?"text-decoration:line-through;opacity:.5":""}">${a.text}</span>
+      </div>`;}).join("")}
+  </div>`:""}
+  ${S.microActions.filter(a=>a.date!==today).length>0?`<div class="card">
+    <div class="card-title">📚 Past Actions</div>
+    ${[...new Set(S.microActions.filter(a=>a.date!==today).map(a=>a.date))].slice(0,7).map(date=>{
+      const acts = S.microActions.filter(a=>a.date===date);
+      const dn = acts.filter(a=>a.done).length;
+      return `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:10px;color:var(--gold-dk)">${date}</div>
+          <div style="font-size:10px;color:${dn===acts.length?C.green:C.orange}">${dn}/${acts.length} done</div>
+        </div>
+        ${acts.map(a=>`<div style="font-size:11px;color:var(--gold-soft);padding:2px 0">${a.done?"✅":"⬜"} ${a.text}</div>`).join("")}
+      </div>`;}).join("")}
+  </div>`:""}`;
+}
+
+// ── POWER QUESTION ─────────────────────────────────────────────
+function renderPowerQuestion(){
+  if(!S.powerQuestions) S.powerQuestions = [];
+  const today = new Date().toDateString();
+  let entry = S.powerQuestions.find(e=>e.date===today)||{date:today,question:"",answers:""};
+  return `
+  ${sectionHdr("❓","Power Question","Ask better questions. Get better answers.")}
+  <div class="card" style="margin-bottom:12px;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2)">
+    <div style="font-size:13px;color:var(--gold-soft);font-weight:700;text-align:center;line-height:1.5">
+      "What would it take for this goal to happen?"
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:10px;color:var(--gold-dk);margin-bottom:6px">YOUR POWER QUESTION TODAY</div>
+    <input style="font-size:13px;margin-bottom:10px" placeholder="What would it take for _____ to happen?"
+      data-action="pq-question" data-date="${today}" value="${entry.question.replace(/"/g,'&quot;')}"/>
+    <div style="font-size:10px;color:var(--gold-dk);margin-bottom:6px">YOUR ANSWERS</div>
+    <textarea style="font-size:13px;min-height:100px;line-height:1.7" placeholder="Write everything that comes to mind..."
+      data-action="pq-answers" data-date="${today}">${entry.answers||""}</textarea>
+    <button class="btn btn-gold btn-block" style="margin-top:10px" data-action="save-pq" data-date="${today}">💾 Save</button>
+  </div>
+  ${S.powerQuestions.length>1?`<div class="card">
+    <div class="card-title">📚 Past Questions (${S.powerQuestions.length})</div>
+    ${S.powerQuestions.slice().reverse().slice(0,7).map(e=>`
+      <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:10px;color:var(--gold-dk)">${e.date}</div>
+        ${e.question?`<div style="font-size:12px;color:var(--gold-soft);margin-top:2px">❓ ${e.question}</div>`:""}
+        ${e.answers?`<div style="font-size:11px;color:var(--gray-lt);margin-top:2px">${e.answers.substring(0,100)}...</div>`:""}
+      </div>`).join("")}
+  </div>`:""}`;
+}
+
+// ── QUESTION LOOP ──────────────────────────────────────────────
+function renderQuestionLoop(){
+  if(!S.questionLoops) S.questionLoops = [];
+  const today = new Date().toDateString();
+  let entry = S.questionLoops.find(e=>e.date===today)||{date:today,q1:"",q2:"",q3:"",saved:false};
+  return `
+  ${sectionHdr("🔁","Manifestation Question Loop","Three questions that unlock your next level.")}
+  <div class="card" style="margin-bottom:14px">
+    ${[
+      {k:"q1", prompt:"What would it take for this goal to happen?",         color:C.gold},
+      {k:"q2", prompt:"Who could help me reach this faster?",               color:C.teal},
+      {k:"q3", prompt:"What one skill would make this outcome inevitable?",  color:C.purple},
+    ].map((q,i)=>`
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:${q.color};letter-spacing:.5px;margin-bottom:4px">QUESTION ${i+1}</div>
+        <div style="font-size:12px;color:var(--gold-soft);font-style:italic;margin-bottom:6px">${q.prompt}</div>
+        <textarea style="font-size:13px;min-height:72px;line-height:1.6;border-left:3px solid ${q.color}"
+          placeholder="Write your answer..."
+          data-action="ql-field" data-field="${q.k}" data-date="${today}">${entry[q.k]||""}</textarea>
+      </div>`).join("")}
+    <button class="btn btn-gold btn-block" data-action="save-ql" data-date="${today}">💾 Save Loop</button>
+  </div>
+  ${S.questionLoops.length>1?`<div class="card">
+    <div class="card-title">📚 Past Loops (${S.questionLoops.length})</div>
+    ${S.questionLoops.slice().reverse().slice(0,5).map(e=>`
+      <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:10px;color:var(--gold-dk);margin-bottom:4px">${e.date}</div>
+        ${e.q1?`<div style="font-size:11px;color:var(--gold-soft)">→ ${e.q1.substring(0,80)}</div>`:""}
+      </div>`).join("")}
+  </div>`:""}`;
+}
+
+// ── UPGRADED TREE MAGNET (sketch style) ───────────────────────
+function renderTreeMagnet(){
+  if(!S.treeMagnet2) S.treeMagnet2 = {
+    goal:"Earn $50,000/month from Kudrant Lab, Accelerator, Rescue+ and Poetry",
+    feelings:"Freedom · Gratitude · Confidence · Peace · Pride · Joy · Power · Clarity · Abundance · Love · Purpose · Courage · Faith · Flow · Ease",
+    branches:[
+      {name:"Kudrant Lab",leaves:[{t:"Record SQL tutorial video",d:false},{t:"Post in community",d:false},{t:"Email members",d:false}]},
+      {name:"DBA Accelerator",leaves:[{t:"Record one lesson",d:false},{t:"Review student Q&A",d:false}]},
+      {name:"Rescue+ Consulting",leaves:[{t:"Follow up with leads",d:false},{t:"Prepare proposal",d:false}]},
+      {name:"Poetry Business",leaves:[{t:"Write 2 poems",d:false},{t:"Post on social",d:false}]}
+    ]
+  };
+  const TM2 = S.treeMagnet2;
+  const ab = window._tm2Branch||0;
+  const done2 = TM2.branches.reduce((a,b)=>a+b.leaves.filter(l=>l.d).length,0);
+  const tot2  = TM2.branches.reduce((a,b)=>a+b.leaves.length,0);
+  const pct2  = tot2>0?Math.round(done2/tot2*100):0;
+  const green2= tot2>0?Math.round(done2/tot2*15):0;
+
+  // Build goal lines (6 lines max, ~20 chars each)
+  const gwords = TM2.goal.split(' ');
+  const glines = ['','','','','',''];let gli=0;
+  gwords.forEach(w=>{if(gli<5&&(glines[gli]+(glines[gli]?' ':'')+w).length>20)gli++;if(gli<6)glines[gli]+=(glines[gli]?' ':'')+w;});
+
+  // Build root lines (3 lines)
+  const rwords = TM2.feelings.split(/\s*·\s*/).filter(Boolean);
+  const rlines = ['','',''];let rli=0;
+  rwords.forEach(w=>{if(rli<2&&(rlines[rli]+(rlines[rli]?' · ':'')+w).length>46)rli++;if(rli<3)rlines[rli]+=(rlines[rli]?' · ':'')+w;});
+
+  // Leaf positions (15)
+  const leafPos = [
+    [26,172,-42],[14,210,-52],[52,150,-30],[36,226,-44],[82,198,-24],
+    [62,230,-36],[162,108,-12],[148,140,-20],[200,88,0],[238,108,12],
+    [252,140,20],[318,198,24],[338,230,36],[350,150,30],[370,172,42]
   ];
 
+  const activeB = TM2.branches[ab]||TM2.branches[0];
+
   return `
-  ${sectionHdr("⚡","Energy Meter","Rate each goal's energetic health. 1 = blocked · 10 = magnetized.")}
-  <div style="display:flex;gap:6px;margin-bottom:16px">
-    ${viewBtn("tree","🌳 Tree Vision",false)}
-    ${viewBtn("energy","⚡ Energy Meter",true)}
+  ${sectionHdr("🌳","Tree Magnetization","Every action grows the tree. Every leaf is a step toward the fruit.")}
+
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:10px;color:var(--gold-dk);letter-spacing:.5px;margin-bottom:4px">TRUNK — YOUR GOAL</div>
+    <input style="font-size:13px" placeholder="Your full goal..." data-action="tm2-goal"
+      value="${TM2.goal.replace(/"/g,'&quot;')}"/>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:10px;color:var(--gold-dk);letter-spacing:.5px;margin-bottom:4px">ROOTS — HOW IT FEELS WHEN IT'S REAL (15 words)</div>
+    <input style="font-size:13px" placeholder="Freedom · Gratitude · Confidence..." data-action="tm2-feelings"
+      value="${TM2.feelings.replace(/"/g,'&quot;')}"/>
   </div>
 
-  ${TM.goals.map((g,gi)=>{
-    const scores = TM.scores.filter(s=>s.goalId===g.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
-    const latest = scores[0]||null;
-    const avg = latest ? ((latest.clarity+latest.alignment+latest.momentum+latest.belief)/4).toFixed(1) : null;
-    const scoreColor = !avg?"var(--gray-lt)":avg>=8?C.green:avg>=6?C.orange:avg>=4?C.gold:C.red;
-    const scoreLabel = !avg?"No score yet":avg>=8?"Strong Magnetization ✨":avg>=6?"Moderate Progress 📈":avg>=4?"Weak Energy ⚠️":"Blocked 🔴";
-    return `
-    <div class="card" style="padding:14px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <div>
-          <div style="font-size:14px;font-weight:700;color:var(--gold)">${g.goal}</div>
-          ${latest?`<div style="font-size:10px;color:var(--gray-lt);margin-top:2px">Last scored: ${latest.date}</div>`:""}
-        </div>
-        ${avg?`<div style="text-align:right">
-          <div style="font-size:24px;font-weight:700;color:${scoreColor}">${avg}</div>
-          <div style="font-size:9px;color:${scoreColor};font-weight:700">${scoreLabel}</div>
-        </div>`:""}
-      </div>
-      ${latest?`
-        ${DRIVERS.map(d=>`
-          <div style="margin-bottom:8px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-              <span style="font-size:10px;color:${d.color};font-weight:700">${d.label}</span>
-              <span style="font-size:11px;font-weight:700;color:${d.color}">${latest[d.key]}/10</span>
-            </div>
-            ${bar(latest[d.key]*10, d.color, 6)}
-          </div>`).join("")}
-        ${latest.blocker?`<div style="margin-top:8px;padding:8px 10px;background:${C.red}10;
-          border:1px solid ${C.red}22;border-radius:8px;font-size:11px;color:${C.red}">
-          ⚠️ Blocker: ${latest.blocker}</div>`:""}
-        ${scores.length>1?`
-          <div style="margin-top:10px">
-            <div style="font-size:9px;color:var(--gold-dk);letter-spacing:1px;margin-bottom:6px">TREND</div>
-            <div style="display:flex;gap:4px;align-items:flex-end;height:36px">
-              ${scores.slice(0,8).reverse().map(s=>{
-                const sc = ((s.clarity+s.alignment+s.momentum+s.belief)/4);
-                const h = Math.round(sc*3.6);
-                const col = sc>=8?C.green:sc>=6?C.orange:C.red;
-                return `<div style="flex:1;height:${h}px;background:${col};border-radius:3px 3px 0 0;
-                  opacity:.8" title="${sc.toFixed(1)}"></div>`;
-              }).join("")}
-            </div>
-          </div>`:""}
-      `:`<div style="text-align:center;padding:12px;color:var(--gray-lt);font-size:11px">
-        No score yet — rate this goal below
-      </div>`}
-      <button class="btn btn-gold btn-block" style="margin-top:12px;font-size:11px"
-        data-action="tm-score-goal" data-gidx="${gi}">⚡ Score This Goal</button>
-    </div>`;}).join("")}`;
+  <svg width="100%" viewBox="0 0 400 620" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 12px">
+    <path d="M162,430 C155,400 152,365 153,332 C154,302 162,275 176,254 C184,242 192,234 200,228 C208,234 216,242 224,254 C238,275 246,302 247,332 C248,365 245,400 238,430 Z" fill="#ede8e0" stroke="#555" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M182,420 C180,388 179,355 181,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>
+    <path d="M218,420 C220,388 221,355 219,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>
+    <path id="tm2heart" d="M200,415 C200,415 158,378 152,348 C147,324 158,304 172,304 C181,304 190,312 196,322 C198,326 200,332 200,332 C200,332 202,326 204,322 C210,312 219,304 228,304 C242,304 253,324 248,348 C242,378 200,415 200,415 Z" fill="white" stroke="#555" stroke-width="1.8"/>
+    ${glines.map((l,i)=>`<text x="200" y="${320+i*13}" text-anchor="middle" font-size="8.5" fill="#333" font-family="Georgia,serif" font-style="italic">${l}</text>`).join("")}
+    <path d="M170,340 C150,325 126,308 100,292 C78,278 56,268 34,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+    <path d="M100,292 C78,270 58,244 40,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M40,216 C28,196 18,174 10,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M165,308 C142,286 116,262 86,240 C66,226 44,216 22,208" stroke="#666" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M172,278 C152,256 128,232 100,210 C80,194 58,182 36,172" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M100,210 C84,192 66,172 50,152" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M230,340 C250,325 274,308 300,292 C322,278 344,268 366,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+    <path d="M300,292 C322,270 342,244 360,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M360,216 C372,196 382,174 390,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M235,308 C258,286 284,262 314,240 C334,226 356,216 378,208" stroke="#666" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M228,278 C248,256 272,232 300,210 C320,194 342,182 364,172" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M300,210 C316,192 334,172 350,152" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M200,260 C196,232 190,204 182,176 C176,154 168,134 158,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M200,260 C204,232 210,204 218,176 C224,154 232,134 242,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M182,176 C174,154 164,132 156,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M218,176 C226,154 236,132 244,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M20,432 Q200,424 380,432" stroke="#999" stroke-width="1.5" fill="none"/>
+    <path d="M172,430 C158,446 140,458 118,468 C100,476 80,480 60,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M118,468 C100,478 82,488 64,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M60,484 C44,490 28,494 12,498" stroke="#777" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M180,432 C170,450 160,466 152,482 C145,496 140,508 136,520" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M152,482 C144,498 136,512 128,526" stroke="#777" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M188,434 C182,452 176,470 172,488 C168,502 166,514 164,524" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M196,435 C193,454 190,473 188,490 C186,505 184,516 183,526" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M200,436 C200,456 200,476 199,494 C198,510 196,522 195,532" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M199,494 C194,508 189,520 184,532" stroke="#777" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M199,494 C204,508 209,520 215,532" stroke="#777" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M204,435 C207,454 210,473 212,490 C214,505 216,516 217,526" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M212,434 C218,452 224,470 228,488 C232,502 234,514 236,524" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M220,432 C230,450 240,466 248,482 C255,496 260,508 264,520" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M248,482 C256,498 264,512 272,526" stroke="#777" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M228,430 C242,446 260,458 282,468 C300,476 320,480 340,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M282,468 C300,478 318,488 336,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M340,484 C356,490 372,494 388,498" stroke="#777" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    ${leafPos.map(([cx,cy,rot],i)=>`
+      <ellipse cx="${cx}" cy="${cy}" rx="16" ry="26" transform="rotate(${rot},${cx},${cy})"
+        fill="${i<green2?"#10B981":"white"}" stroke="${i<green2?"#0a8c63":"#555"}" stroke-width="1.8"/>`).join("")}
+    ${rlines.map((l,i)=>`<text x="200" y="${548+i*14}" text-anchor="middle" font-size="9" fill="#aaa" font-family="Georgia,serif" font-style="italic">${l}</text>`).join("")}
+  </svg>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;border:0.5px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(16,185,129,.06)">
+    <span style="font-size:12px;color:var(--gray-lt)">Tree growth</span>
+    <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden">
+      <div style="height:100%;width:${pct2}%;background:#10B981;border-radius:3px;transition:width .5s"></div>
+    </div>
+    <span style="font-size:13px;font-weight:700;color:#10B981">${pct2}%</span>
+    <span style="font-size:11px;color:var(--gray-lt)">${done2}/${tot2} leaves</span>
+  </div>
+
+  <div style="font-size:10px;color:var(--gold-dk);letter-spacing:.5px;margin-bottom:6px">BRANCHES</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+    ${TM2.branches.map((b,i)=>`
+      <span style="padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;
+        border:1px solid ${i===ab?"rgba(201,168,76,.6)":"rgba(255,255,255,.1)"};
+        background:${i===ab?"rgba(201,168,76,.12)":"transparent"};
+        color:${i===ab?"var(--gold)":"var(--gray-lt)"}"
+        data-action="tm2-branch" data-idx="${i}">${b.name}</span>`).join("")}
+    <button class="btn btn-outline" style="font-size:11px;padding:4px 10px" data-action="tm2-add-branch">+ Branch</button>
+  </div>
+
+  ${activeB?`<div class="card" style="margin-bottom:12px">
+    <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px">${activeB.name} — Leaf Actions</div>
+    ${activeB.leaves.map((l,li)=>`
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <input type="checkbox" ${l.d?"checked":""} data-action="tm2-leaf" data-b="${ab}" data-l="${li}"
+          style="width:15px;height:15px;accent-color:#10B981;cursor:pointer;flex-shrink:0"/>
+        <span style="font-size:13px;color:var(--gold-soft);flex:1;${l.d?"text-decoration:line-through;opacity:.5":""}">${l.t}</span>
+        <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:10px"
+          data-action="tm2-del-leaf" data-b="${ab}" data-l="${li}">✕</button>
+      </div>`).join("")}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="tm2li" style="flex:1;font-size:13px" placeholder="Add a leaf action..."
+        onkeydown="if(event.key==='Enter'){const el=document.getElementById('tm2li');if(el.value.trim()){S.treeMagnet2.branches[${ab}].leaves.push({t:el.value.trim(),d:false});el.value='';save();render();}}"/>
+      <button class="btn btn-outline" style="font-size:12px" data-action="tm2-add-leaf" data-b="${ab}">Add</button>
+    </div>
+  </div>`:""}
+
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-outline" style="flex:1;font-size:12px" data-action="tm2-reset-leaves">Reset Leaves</button>
+    <button style="flex:1;padding:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
+      border-radius:8px;color:${C.red};font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif"
+      data-action="tm2-reset-all">Full Reset</button>
+  </div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3512,7 +3817,16 @@ const RENDERS = {
   resources:    renderResources,
   files:        renderFiles,
   secondbrain:  renderSecondBrain,
+  dailymanifest:renderDailyManifest,
+  livinginend:  renderLivingInEnd,
+  visualization:renderVisualization,
+  identityshift:renderIdentityShift,
+  gratitude:    renderGratitude,
+  emotclear:    renderEmotClear,
+  microaction:  renderMicroAction,
   treemagnet:   renderTreeMagnet,
+  powerquestion:renderPowerQuestion,
+  questionloop: renderQuestionLoop,
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -4125,6 +4439,233 @@ function handleClick(e){
       if(confirm("Delete this knowledge entry?")){ S.secondBrain.knowledge.splice(idx,1); save(); render(); } break;
 
     // ── TREE MAGNET HANDLERS ────────────────────────────────
+    // ── MANIFEST LAB HANDLERS ───────────────────────────────
+    case "manifest-field": {
+      const mDate=el.dataset.date, mField=el.dataset.field;
+      if(!S.manifestLog) S.manifestLog=[];
+      let me=S.manifestLog.find(e=>e.date===mDate);
+      if(!me){me={date:mDate,goal:"",affirmation:"",visualization:"",action:"",powerq:"",g1:"",g2:"",g3:"",saved:false};S.manifestLog.push(me);}
+      me[mField]=el.value; save(); break;
+    }
+    case "save-manifest": {
+      const mDate2=el.dataset.date;
+      if(!S.manifestLog) S.manifestLog=[];
+      let me2=S.manifestLog.find(e=>e.date===mDate2);
+      if(!me2){me2={date:mDate2,goal:"",affirmation:"",visualization:"",action:"",powerq:"",g1:"",g2:"",g3:"",saved:false};S.manifestLog.push(me2);}
+      me2.saved=true; save(); showSyncToast("🌟 Daily manifest saved!"); render(); break;
+    }
+    case "lie-add":
+      openCustomModal("🧠 Add Goal State — Living in the End",`
+        <label class="lbl">Goal Statement (write in PAST TENSE — as if already done)</label>
+        <input id="m-lies" class="inp" placeholder="I love my $50K/month income. I am a thriving Oracle DBA...">
+        <label class="lbl">Emotion I Choose to Feel</label>
+        <input id="m-liem" class="inp" placeholder="Relief · Confidence · Gratitude · Pride...">
+        <label class="lbl">Daily Reminder</label>
+        <select id="m-lier" class="inp"><option value="">No reminder</option><option value="yes">Yes — remind me daily</option></select>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const s=g('m-lies').value.trim();
+            if(!s){alert('Enter your goal statement');return;}
+            if(!S.livingInEnd)S.livingInEnd={goals:[],reminder:false};
+            S.livingInEnd.goals.push({statement:s,emotion:g('m-liem').value.trim(),reminder:g('m-lier').value==='yes'});
+            save();closeCustomModal();render();">Add</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    case "lie-delete":
+      if(confirm("Remove this goal state?")){ S.livingInEnd.goals.splice(idx,1); save(); render(); } break;
+
+    case "viz-start":{
+      if(!window._vizTimer) window._vizTimer={running:false,seconds:120};
+      if(window._vizTimer.running) break;
+      window._vizTimer.running=true;
+      window._vizInterval=setInterval(()=>{
+        window._vizTimer.seconds--;
+        const m=Math.floor(window._vizTimer.seconds/60);
+        const s=window._vizTimer.seconds%60;
+        const cl=document.getElementById('vizClock');
+        if(cl) cl.textContent=m+":"+(s<10?"0":"")+s;
+        if(window._vizTimer.seconds<=0){
+          clearInterval(window._vizInterval);
+          window._vizTimer={running:false,seconds:120};
+          // Chime sound
+          try{const ctx=new(window.AudioContext||window.webkitAudioContext)();
+            const o=ctx.createOscillator();const g2=ctx.createGain();
+            o.connect(g2);g2.connect(ctx.destination);
+            o.frequency.setValueAtTime(528,ctx.currentTime);
+            o.frequency.setValueAtTime(639,ctx.currentTime+0.4);
+            o.frequency.setValueAtTime(741,ctx.currentTime+0.8);
+            g2.gain.setValueAtTime(0.3,ctx.currentTime);
+            g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.8);
+            o.start(ctx.currentTime);o.stop(ctx.currentTime+1.8);
+          }catch(e){}
+          showSyncToast("🎥 Visualization complete! Beautiful work."); render();
+        }
+      },1000); break;}
+    case "viz-reset":
+      clearInterval(window._vizInterval);
+      window._vizTimer={running:false,seconds:120};
+      render(); break;
+    case "viz-add":
+      openCustomModal("🎥 Save a Visualization",`
+        <label class="lbl">Visualization Scene</label>
+        <textarea id="m-vscene" class="inp" rows="3" placeholder="Opening the email with the offer. Signing the contract. Seeing my bank account..."></textarea>
+        <label class="lbl">Emotions Felt</label>
+        <input id="m-vemot" class="inp" placeholder="Excitement · Calm · Pride · Gratitude...">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const sc=document.getElementById('m-vscene').value.trim();
+            if(!sc){alert('Describe your scene');return;}
+            if(!S.visualizations)S.visualizations=[];
+            S.visualizations.unshift({scene:sc,emotions:g('m-vemot').value.trim(),date:new Date().toDateString()});
+            save();closeCustomModal();render();">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    case "viz-delete":
+      if(confirm("Remove this visualization?")){ S.visualizations.splice(idx,1); save(); render(); } break;
+
+    case "id-add":
+      openCustomModal("🪞 Identity Shift — Future Self",`
+        <label class="lbl">Goal / Vision</label>
+        <input id="m-idg" class="inp" placeholder="e.g. Six-Figure Oracle DBA / $50K/month Entrepreneur">
+        <label class="lbl">How they THINK</label>
+        <input id="m-idth" class="inp" placeholder="They believe in abundance. They solve problems calmly...">
+        <label class="lbl">How they STUDY / LEARN</label>
+        <input id="m-idst" class="inp" placeholder="They practice SQL daily. They read 20 min/day...">
+        <label class="lbl">How they ACT daily</label>
+        <input id="m-idac" class="inp" placeholder="They show up consistently. They market every day...">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const goal=g('m-idg').value.trim();
+            if(!goal){alert('Enter a goal');return;}
+            if(!S.identityShift)S.identityShift={entries:[]};
+            S.identityShift.entries.push({goal,think:g('m-idth').value.trim(),study:g('m-idst').value.trim(),act:g('m-idac').value.trim()});
+            save();closeCustomModal();render();">Add</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    case "id-delete":
+      if(confirm("Remove this identity entry?")){ S.identityShift.entries.splice(idx,1); save(); render(); } break;
+
+    case "grat-field": {
+      const gDate=el.dataset.date,gField=el.dataset.field;
+      if(!S.gratitudeLog)S.gratitudeLog=[];
+      let ge=S.gratitudeLog.find(e=>e.date===gDate);
+      if(!ge){ge={date:gDate,g1:"",g2:"",g3:""};S.gratitudeLog.push(ge);}
+      ge[gField]=el.value; save(); break;
+    }
+    case "save-gratitude": {
+      showSyncToast("🙏 Gratitude saved!"); save(); break;
+    }
+
+    case "ec-add":
+      openCustomModal("🧹 Emotional Clearing",`
+        <label class="lbl">Goal</label>
+        <input id="m-ecg" class="inp" placeholder="e.g. I earn $150K as a DBA">
+        <label class="lbl">Limiting Belief</label>
+        <textarea id="m-ecl" class="inp" rows="2" placeholder="I'm not experienced enough. I don't know how..."></textarea>
+        <label class="lbl">Replacement Truth</label>
+        <textarea id="m-ecr" class="inp" rows="2" placeholder="Every expert DBA started as a beginner. I am growing every day..."></textarea>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const goal=g('m-ecg').value.trim();
+            if(!goal){alert('Enter a goal');return;}
+            if(!S.emotClear)S.emotClear=[];
+            S.emotClear.unshift({goal,limit:document.getElementById('m-ecl').value.trim(),replace:document.getElementById('m-ecr').value.trim()});
+            save();closeCustomModal();render();">Clear It</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    case "ec-delete":
+      if(confirm("Remove this clearing?")){ S.emotClear.splice(idx,1); save(); render(); } break;
+
+    case "ma-add":
+      openCustomModal("⚡ Micro Aligned Action",`
+        <label class="lbl">What is one small action your future self would take today?</label>
+        <input id="m-mat" class="inp" placeholder="Practice one SQL query. Send one email. Write one poem line...">
+        <div style="font-size:11px;color:var(--gray-lt);margin-bottom:10px;font-style:italic">Examples: Practice one SQL query · Review RMAN · Apply to one job · Post one piece of content</div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const t=g('m-mat').value.trim();
+            if(!t){alert('Enter an action');return;}
+            if(!S.microActions)S.microActions=[];
+            S.microActions.unshift({text:t,done:false,date:new Date().toDateString()});
+            save();closeCustomModal();render();">Add Action</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    case "ma-toggle":
+      if(!S.microActions) break;
+      S.microActions[idx].done = !S.microActions[idx].done;
+      save(); render(); break;
+
+    // ── TREE MAGNET 2 HANDLERS ──────────────────────────────
+    case "tm2-branch":
+      window._tm2Branch = idx; render(); break;
+    case "tm2-add-branch":
+      openCustomModal("🌳 Add Branch",`
+        <label class="lbl">Branch Name (skill area or focus area)</label>
+        <input id="m-tm2b" class="inp" placeholder="e.g. SQL Mastery, Health, Spirituality, Marketing">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const n=g('m-tm2b').value.trim();
+            if(!n){alert('Enter a branch name');return;}
+            S.treeMagnet2.branches.push({name:n,leaves:[]});
+            window._tm2Branch=S.treeMagnet2.branches.length-1;
+            save();closeCustomModal();render();">Add Branch</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    case "tm2-leaf":
+      if(!S.treeMagnet2) break;
+      S.treeMagnet2.branches[parseInt(el.dataset.b)].leaves[parseInt(el.dataset.l)].d = el.checked;
+      save(); render(); break;
+    case "tm2-del-leaf":
+      if(confirm("Remove this leaf?")){
+        S.treeMagnet2.branches[parseInt(el.dataset.b)].leaves.splice(parseInt(el.dataset.l),1);
+        save(); render();
+      } break;
+    case "tm2-add-leaf":{
+      const inp=document.getElementById('tm2li');
+      if(inp&&inp.value.trim()){
+        S.treeMagnet2.branches[parseInt(el.dataset.b)].leaves.push({t:inp.value.trim(),d:false});
+        save(); render();
+      } break;}
+    case "tm2-reset-leaves":
+      if(confirm("Reset all leaf completions?")){
+        S.treeMagnet2.branches.forEach(b=>b.leaves.forEach(l=>l.d=false));
+        save(); render();
+      } break;
+    case "tm2-reset-all":
+      if(confirm("Full reset — clear all branches and leaves?")){
+        S.treeMagnet2.branches=[];window._tm2Branch=0;save();render();
+      } break;
+
+    case "pq-question": {
+      const pDate=el.dataset.date;
+      if(!S.powerQuestions)S.powerQuestions=[];
+      let pe=S.powerQuestions.find(e=>e.date===pDate);
+      if(!pe){pe={date:pDate,question:"",answers:""};S.powerQuestions.push(pe);}
+      pe.question=el.value; save(); break;
+    }
+    case "pq-answers": {
+      const pDate=el.dataset.date;
+      if(!S.powerQuestions)S.powerQuestions=[];
+      let pe=S.powerQuestions.find(e=>e.date===pDate);
+      if(!pe){pe={date:pDate,question:"",answers:""};S.powerQuestions.push(pe);}
+      pe.answers=el.value; save(); break;
+    }
+    case "save-pq": showSyncToast("❓ Power question saved!"); save(); break;
+
+    case "ql-field": {
+      const qDate=el.dataset.date,qField=el.dataset.field;
+      if(!S.questionLoops)S.questionLoops=[];
+      let qe=S.questionLoops.find(e=>e.date===qDate);
+      if(!qe){qe={date:qDate,q1:"",q2:"",q3:"",saved:false};S.questionLoops.push(qe);}
+      qe[qField]=el.value; save(); break;
+    }
+    case "save-ql": {
+      const qDate=el.dataset.date;
+      if(!S.questionLoops)S.questionLoops=[];
+      let qe=S.questionLoops.find(e=>e.date===qDate);
+      if(qe) qe.saved=true; save(); showSyncToast("🔁 Question loop saved!"); render(); break;
+    }
+
     case "tm-view":
       if(!S.treeMagnet) S.treeMagnet={view:"tree",goals:[],scores:[]};
       S.treeMagnet.view = el.dataset.view;
@@ -4863,6 +5404,12 @@ function handleInput(e){
     case "exp-filter-month":
       window._expMonth = el.value;
       render(); break;
+    case "tm2-goal":
+      if(!S.treeMagnet2) break;
+      S.treeMagnet2.goal = el.value; save(); break;
+    case "tm2-feelings":
+      if(!S.treeMagnet2) break;
+      S.treeMagnet2.feelings = el.value; save(); break;
     case "rm-toggle":{
       const sec=el.dataset.section, sub=el.dataset.sub, i=parseInt(el.dataset.idx);
       if(S.resourceMap&&S.resourceMap[sec]&&S.resourceMap[sec][sub]){
@@ -4917,6 +5464,13 @@ function handleInput(e){
       rfr[rfField] = el.value;
       save(); break;
     }
+    case "sch-hist-note": {
+      const histDate = el.dataset.date;
+      if(!S.scheduleHistory) S.scheduleHistory = [];
+      const entry = S.scheduleHistory.find(h=>h.date===histDate);
+      if(entry) entry.notes = el.value;
+      save(); break;
+    }
     case "hundred-item": {
       const idx = parseInt(el.dataset.idx);
       S.hundredThings[idx].item = el.value;
@@ -4969,7 +5523,16 @@ const TAB_GROUPS = {
   ],
   mind: [
     {id:"secondbrain",  icon:"📝", label:"Second Brain"},
+    {id:"dailymanifest",icon:"🌟", label:"Daily Manifest"},
+    {id:"livinginend",  icon:"🧠", label:"Living in End"},
+    {id:"visualization",icon:"🎥", label:"Visualize"},
+    {id:"identityshift",icon:"🪞", label:"Identity"},
+    {id:"gratitude",    icon:"🙏", label:"Gratitude"},
+    {id:"emotclear",    icon:"🧹", label:"Clearing"},
+    {id:"microaction",  icon:"⚡", label:"Micro Action"},
     {id:"treemagnet",   icon:"🌳", label:"Tree Magnet"},
+    {id:"powerquestion",icon:"❓", label:"Power Q"},
+    {id:"questionloop", icon:"🔁", label:"Q Loop"},
   ],
 };
 
