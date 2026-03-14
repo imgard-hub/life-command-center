@@ -3646,9 +3646,23 @@ function renderTreeMagnet(){
     leafDone:Array(15).fill(false), roots:Array(15).fill("")
   };
   const TM = S.treeMagnet2;
+  // Migrate old format — feelings was a string or had branches array
   if(!Array.isArray(TM.leaves))   TM.leaves   = Array(15).fill("");
   if(!Array.isArray(TM.leafDone)) TM.leafDone = Array(15).fill(false);
-  if(!Array.isArray(TM.roots))    TM.roots    = Array(15).fill("");
+  // Migrate roots — old format used 'feelings' (string or array)
+  if(!Array.isArray(TM.roots)){
+    if(Array.isArray(TM.feelings)) TM.roots = TM.feelings.slice(0,15);
+    else if(typeof TM.feelings === 'string' && TM.feelings){
+      // Split old comma/dot separated string into 15 slots
+      const parts = TM.feelings.split(/\s*[·\·,]\s*/).filter(Boolean);
+      TM.roots = Array(15).fill("").map((_,i)=>parts[i]||"");
+    } else TM.roots = Array(15).fill("");
+    delete TM.feelings;
+  }
+  // Ensure exactly 15 slots
+  while(TM.leaves.length   < 15) TM.leaves.push("");
+  while(TM.leafDone.length < 15) TM.leafDone.push(false);
+  while(TM.roots.length    < 15) TM.roots.push("");
 
   const doneCt = TM.leafDone.filter(Boolean).length;
   const pct2   = Math.round(doneCt/15*100);
@@ -3860,8 +3874,9 @@ function saveModal(){ if(modalCallback) modalCallback(); }
 // EVENT HANDLERS
 // ══════════════════════════════════════════════════════════════
 function attachHandlers(){
-  document.getElementById("content").addEventListener("click", handleClick);
-  document.getElementById("content").addEventListener("input", handleInput);
+  document.getElementById("content").addEventListener("click",  handleClick);
+  document.getElementById("content").addEventListener("input",  handleInput);
+  document.getElementById("content").addEventListener("change", handleInput);
 }
 
 function handleClick(e){
@@ -4573,13 +4588,7 @@ function handleClick(e){
       S.microActions[idx].done = !S.microActions[idx].done;
       save(); render(); break;
 
-    // ── TREE MAGNET HANDLERS ────────────────────────────────
-    case "tm2-leaf-check":
-      if(!S.treeMagnet2) break;
-      S.treeMagnet2.leafDone[parseInt(el.dataset.i)] = el.checked;
-      save(); render(); break;
-
-    case "tm2-reset-leaves":
+    // ── TREE MAGNET HANDLERS ────────────────────────────────    case "tm2-reset-leaves":
       if(confirm("Reset all leaf completions?")){
         if(!S.treeMagnet2) break;
         S.treeMagnet2.leafDone = Array(15).fill(false);
@@ -5363,6 +5372,10 @@ function handleInput(e){
     case "exp-filter-month":
       window._expMonth = el.value;
       render(); break;
+    case "tm2-leaf-check":
+      if(!S.treeMagnet2) break;
+      S.treeMagnet2.leafDone[parseInt(el.dataset.i)] = el.checked;
+      save(); render(); break;
     case "tm2-goal-input":
       if(!S.treeMagnet2) break;
       S.treeMagnet2.goal = el.value; save();
