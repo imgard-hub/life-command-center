@@ -680,26 +680,23 @@ async function pullFromCloud(forceApply = false){
 
 // Migrate treeMagnet2 from old branch/feelings format to new leaves/roots format
 function migrateTreeMagnet(){
-  if(!S.treeMagnet2) {
+  if(!S.treeMagnet2 || typeof S.treeMagnet2 !== 'object') {
     S.treeMagnet2 = {goal:"", leaves:Array(15).fill(""), done:Array(15).fill(false), roots:Array(15).fill("")};
     return;
   }
   const TM = S.treeMagnet2;
-  // Fix leaves — old format had branches array with nested leaves
-  if(!Array.isArray(TM.leaves) || TM.leaves.every(l=>l==="")){
+  // Fix leaves — only if not a proper array (structural fix, not content fix)
+  if(!Array.isArray(TM.leaves)){
     if(Array.isArray(TM.branches) && TM.branches.length > 0){
-      // Extract all leaf texts from old branches structure
       const allLeaves = [];
       TM.branches.forEach(b => { (b.leaves||[]).forEach(l => { if(l.t) allLeaves.push(l.t); }); });
       TM.leaves = Array(15).fill("").map((_,i) => allLeaves[i]||"");
-      TM.done = Array(15).fill(false);
     } else {
       TM.leaves = Array(15).fill("");
-      TM.done = Array(15).fill(false);
     }
   }
   if(!Array.isArray(TM.done)) TM.done = Array(15).fill(false);
-  // Fix roots — old format used 'feelings' key (string or array)
+  // Fix roots — only if not a proper array
   if(!Array.isArray(TM.roots)){
     if(Array.isArray(TM.feelings)){
       TM.roots = Array(15).fill("").map((_,i) => TM.feelings[i]||"");
@@ -715,12 +712,12 @@ function migrateTreeMagnet(){
   delete TM.view;
   delete TM.scores;
   // Ensure exactly 15 slots
-  while(TM.leaves.length   < 15) TM.leaves.push("");
-  while(TM.done.length < 15) TM.done.push(false);
-  while(TM.roots.length    < 15) TM.roots.push("");
-  TM.leaves   = TM.leaves.slice(0,15);
-  TM.done = TM.done.slice(0,15);
-  TM.roots    = TM.roots.slice(0,15);
+  while(TM.leaves.length < 15) TM.leaves.push("");
+  while(TM.done.length   < 15) TM.done.push(false);
+  while(TM.roots.length  < 15) TM.roots.push("");
+  TM.leaves = TM.leaves.slice(0,15);
+  TM.done   = TM.done.slice(0,15);
+  TM.roots  = TM.roots.slice(0,15);
   S.treeMagnet2 = TM;
 }
 migrateTreeMagnet(); // Fix any old tree data in localStorage on startup
@@ -5462,7 +5459,7 @@ function handleInput(e){
       save(); render(); break;
     case "tm3-goal":
       if(!S.treeMagnet2) break;
-      S.treeMagnet2.goal = el.value; save(); render(); break;
+      S.treeMagnet2.goal = el.value; save(); break;
     case "tm3-leaf":
       if(!S.treeMagnet2) break;
       if(!Array.isArray(S.treeMagnet2.leaves)) S.treeMagnet2.leaves = Array(15).fill('');
