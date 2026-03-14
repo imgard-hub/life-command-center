@@ -3642,20 +3642,17 @@ function renderQuestionLoop(){
 // ── UPGRADED TREE MAGNET (sketch style) ───────────────────────
 function renderTreeMagnet(){
   if(!S.treeMagnet2) S.treeMagnet2 = {
-    goal:"",
-    leaves:Array(15).fill(""),
-    leafDone:Array(15).fill(false),
-    roots:Array(15).fill("")
+    goal:"", leaves:Array(15).fill(""),
+    leafDone:Array(15).fill(false), roots:Array(15).fill("")
   };
   const TM = S.treeMagnet2;
-  if(!Array.isArray(TM.leaves))  TM.leaves  = Array(15).fill("");
-  if(!Array.isArray(TM.leafDone))TM.leafDone= Array(15).fill(false);
-  if(!Array.isArray(TM.roots))   TM.roots   = Array(15).fill("");
+  if(!Array.isArray(TM.leaves))   TM.leaves   = Array(15).fill("");
+  if(!Array.isArray(TM.leafDone)) TM.leafDone = Array(15).fill(false);
+  if(!Array.isArray(TM.roots))    TM.roots    = Array(15).fill("");
 
   const doneCt = TM.leafDone.filter(Boolean).length;
   const pct2   = Math.round(doneCt/15*100);
 
-  // Leaf positions [cx,cy,rx,ry,rot]
   const LP=[
     [26,172,16,26,-42],[14,210,15,24,-52],[52,150,16,25,-30],
     [36,226,15,23,-44],[82,198,16,26,-24],[62,230,15,23,-36],
@@ -3664,122 +3661,104 @@ function renderTreeMagnet(){
     [338,230,15,23,36],[350,150,16,25,30],[370,172,16,26,42]
   ];
 
-  // Goal wraps into heart
-  const gwords=(TM.goal||"").split(" ").filter(Boolean);
-  const gl=["","","","","",""];let gi=0;
-  gwords.forEach(w=>{if(gi<5&&(gl[gi]+(gl[gi]?" ":"")+w).length>20)gi++;if(gi<6)gl[gi]+=(gl[gi]?" ":"")+w;});
+  // Wrap goal into heart lines (~20 chars each, max 6 lines)
+  const gwords = (TM.goal||"").split(" ").filter(Boolean);
+  const gl = ["","","","","",""];
+  let gi = 0;
+  gwords.forEach(w => {
+    if(gi < 5 && (gl[gi] + (gl[gi]?" ":"") + w).length > 20) gi++;
+    if(gi < 6) gl[gi] += (gl[gi]?" ":"") + w;
+  });
 
-  return `
-  ${sectionHdr("\u{1F333}","Tree Magnetization","Every action grows the tree. Every leaf is a step toward the fruit.")}
+  const leafSvg = LP.map(([cx,cy,rx,ry,rot],i) => {
+    const done  = TM.leafDone[i];
+    const txt   = (TM.leaves[i]||"").trim();
+    const fill  = done ? "#10B981" : txt ? "#e8f5e9" : "white";
+    const strk  = done ? "#0a8c63" : txt ? "#4caf50" : "#888";
+    return '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" transform="rotate('+rot+','+cx+','+cy+')" fill="'+fill+'" stroke="'+strk+'" stroke-width="1.8"/>';
+  }).join("");
 
-  <!-- PROGRESS -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:9px 14px;
-    border:0.5px solid rgba(16,185,129,.25);border-radius:10px;background:rgba(16,185,129,.06)">
-    <span style="font-size:13px">\u{1F331}</span>
-    <div style="flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden">
-      <div style="height:100%;width:${pct2}%;background:#10B981;border-radius:4px;transition:width .5s"></div>
-    </div>
-    <span style="font-size:14px;font-weight:700;color:#10B981">${pct2}%</span>
-    <span style="font-size:11px;color:var(--gray-lt)">${doneCt}/15 leaves complete</span>
-  </div>
+  const goalSvg = TM.goal
+    ? gl.filter(Boolean).map((l,i) => '<text class="goal-line" x="200" y="'+(316+i*14)+'" text-anchor="middle" font-size="8.5" fill="#333" font-family=\'Georgia,serif\' font-style=\'italic\'>'+l+'</text>').join("")
+    : '<text class="goal-placeholder" x="200" y="362" text-anchor="middle" font-size="8" fill="#bbb" font-family=\'Georgia,serif\' font-style=\'italic\'>your goal here</text>';
 
-  <!-- TREE SVG — visual only, no interaction -->
-  <svg width="100%" viewBox="0 0 400 455" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 14px;border-radius:12px;background:rgba(255,255,255,.02)">
-    <!-- Trunk -->
-    <path d="M162,430 C155,400 152,365 153,332 C154,302 162,275 176,254 C184,242 192,234 200,228 C208,234 216,242 224,254 C238,275 246,302 247,332 C248,365 245,400 238,430 Z" fill="#ede8e0" stroke="#555" stroke-width="2"/>
-    <path d="M182,420 C180,388 179,355 181,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>
-    <path d="M218,420 C220,388 221,355 219,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>
-    <!-- Heart -->
-    <path d="M200,415 C200,415 158,378 152,348 C147,324 158,304 172,304 C181,304 190,312 196,322 C198,326 200,332 200,332 C200,332 202,326 204,322 C210,312 219,304 228,304 C242,304 253,324 248,348 C242,378 200,415 200,415Z" fill="white" stroke="#666" stroke-width="1.8"/>
-    ${TM.goal
-      ? gl.filter(Boolean).map((l,i)=>`<text x="200" y="${316+i*14}" text-anchor="middle" font-size="8.5" fill="#333" font-family="Georgia,serif" font-style="italic">${l}</text>`).join("")
-      : `<text x="200" y="362" text-anchor="middle" font-size="8" fill="#bbb" font-family="Georgia,serif" font-style="italic">your goal here</text>`}
-    <!-- Branches -->
-    <path d="M170,340 C150,325 126,308 100,292 C78,278 56,268 34,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>
-    <path d="M100,292 C78,270 58,244 40,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <path d="M40,216 C28,196 18,174 10,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M165,308 C142,286 116,262 86,240 C66,226 44,216 22,208" stroke="#666" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M172,278 C152,256 128,232 100,210 C80,194 58,182 36,172" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M100,210 C84,192 66,172 50,152" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M230,340 C250,325 274,308 300,292 C322,278 344,268 366,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>
-    <path d="M300,292 C322,270 342,244 360,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <path d="M360,216 C372,196 382,174 390,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M235,308 C258,286 284,262 314,240 C334,226 356,216 378,208" stroke="#666" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M228,278 C248,256 272,232 300,210 C320,194 342,182 364,172" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M300,210 C316,192 334,172 350,152" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M200,260 C196,232 190,204 182,176 C176,154 168,134 158,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <path d="M200,260 C204,232 210,204 218,176 C224,154 232,134 242,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <path d="M182,176 C174,154 164,132 156,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M218,176 C226,154 236,132 244,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- Ground -->
-    <path d="M20,432 Q200,424 380,432" stroke="#999" stroke-width="1.5" fill="none"/>
-    <!-- Roots -->
-    <path d="M172,430 C158,446 140,458 118,468 C100,476 80,480 60,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <path d="M118,468 C100,478 82,488 64,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M180,432 C170,450 160,466 152,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M188,434 C182,452 176,470 172,486" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M196,435 C193,454 190,473 188,490" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M200,436 C200,456 200,476 199,492" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M204,435 C207,454 210,473 212,490" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M212,434 C218,452 224,470 228,486" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M220,432 C230,450 240,466 248,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M228,430 C242,446 260,458 282,468 C300,476 320,480 340,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <path d="M282,468 C300,478 318,488 336,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- Leaves — colored by done/filled/empty -->
-    ${LP.map(([cx,cy,rx,ry,rot],i)=>{
-      const done = TM.leafDone[i];
-      const txt  = (TM.leaves[i]||"").trim();
-      const fill = done ? "#10B981" : txt ? "#e8f5e9" : "white";
-      const strk = done ? "#0a8c63" : txt ? "#4caf50" : "#888";
-      return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${rot},${cx},${cy})" fill="${fill}" stroke="${strk}" stroke-width="1.8"/>`;
-    }).join("")}
-  </svg>
+  const leavesGrid = TM.leaves.map((l,i) =>
+    '<div style="display:flex;align-items:center;gap:6px">'+
+      '<input type="checkbox" '+(TM.leafDone[i]?"checked":"")+' data-action="tm2-leaf-check" data-i="'+i+'" style="width:14px;height:14px;accent-color:#10B981;flex-shrink:0;cursor:pointer"/>'+
+      '<input style="flex:1;font-size:12px;padding:5px 7px;'+(TM.leafDone[i]?"opacity:.4;text-decoration:line-through":"")+'" placeholder="Leaf '+(i+1)+'..." data-action="tm2-leaf-input" data-i="'+i+'" value="'+((l||"").replace(/"/g,"&quot;"))+'"/>'+
+    '</div>'
+  ).join("");
 
-  <!-- TRUNK INPUT -->
-  <div class="card" style="margin-bottom:10px;border-left:4px solid var(--gold)">
-    <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px">\u{1F333} TRUNK — YOUR GOAL / INTENTION</div>
-    <textarea style="font-size:13px;min-height:70px;line-height:1.6;font-style:italic"
-      placeholder="Write your full goal or intention here — it will appear in the heart of the trunk..."
-      data-action="tm2-goal-input">${TM.goal||""}</textarea>
-  </div>
+  const rootsGrid = TM.roots.map((r,i) =>
+    '<input style="font-size:11px;padding:5px 6px;text-align:center" placeholder="Feeling '+(i+1)+'..." data-action="tm2-root-input" data-i="'+i+'" value="'+((r||"").replace(/"/g,"&quot;"))+'"/>'
+  ).join("");
 
-  <!-- LEAVES INPUTS -->
-  <div class="card" style="margin-bottom:10px;border-left:4px solid #10B981">
-    <div style="font-size:10px;color:#10B981;font-weight:700;letter-spacing:1px;margin-bottom:8px">\u{1F33F} LEAVES — 15 THINGS YOU WANT (your desires, actions, intentions)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${TM.leaves.map((l,i)=>`
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="checkbox" ${TM.leafDone[i]?"checked":""}
-            data-action="tm2-leaf-check" data-i="${i}"
-            style="width:14px;height:14px;accent-color:#10B981;flex-shrink:0;cursor:pointer"/>
-          <input style="flex:1;font-size:12px;padding:6px 8px;${TM.leafDone[i]?"opacity:.45;text-decoration:line-through":""}"
-            placeholder="Leaf ${i+1}..."
-            data-action="tm2-leaf-input" data-i="${i}"
-            value="${(l||"").replace(/"/g,"&quot;")}"/>
-        </div>`).join("")}
-    </div>
-  </div>
+  return sectionHdr("&#127795;","Tree Magnetization","Every action grows the tree.") +
 
-  <!-- ROOTS INPUTS -->
-  <div class="card" style="margin-bottom:12px;border-left:4px solid #8B5CF6">
-    <div style="font-size:10px;color:#8B5CF6;font-weight:700;letter-spacing:1px;margin-bottom:8px">\u{1F331} ROOTS — 15 FEELINGS (how it feels when your intention comes true)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-      ${TM.roots.map((r,i)=>`
-        <input style="font-size:12px;padding:5px 8px;text-align:center"
-          placeholder="Feeling ${i+1}..."
-          data-action="tm2-root-input" data-i="${i}"
-          value="${(r||"").replace(/"/g,"&quot;")}"/>`).join("")}
-    </div>
-  </div>
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:9px 14px;'+
+    'border:0.5px solid rgba(16,185,129,.25);border-radius:10px;background:rgba(16,185,129,.06)">'+
+    '<div style="flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden">'+
+      '<div style="height:100%;width:'+pct2+'%;background:#10B981;border-radius:4px;transition:width .5s"></div>'+
+    '</div>'+
+    '<span style="font-size:14px;font-weight:700;color:#10B981">'+pct2+'%</span>'+
+    '<span style="font-size:11px;color:var(--gray-lt)">'+doneCt+'/15 done</span>'+
+  '</div>'+
 
-  <div style="display:flex;gap:8px">
-    <button class="btn btn-outline" style="flex:1;font-size:12px" data-action="tm2-reset-leaves">\u{21BA} Reset Completions</button>
-    <button style="flex:1;padding:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
-      border-radius:8px;color:${C.red};font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif"
-      data-action="tm2-reset-all">\u{1F5D1} Full Reset</button>
-  </div>`;
+  '<svg width="100%" viewBox="0 0 400 455" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 0 12px;border-radius:12px;background:rgba(255,255,255,.02)">'+
+    '<path d="M162,430 C155,400 152,365 153,332 C154,302 162,275 176,254 C184,242 192,234 200,228 C208,234 216,242 224,254 C238,275 246,302 247,332 C248,365 245,400 238,430 Z" fill="#ede8e0" stroke="#555" stroke-width="2"/>'+
+    '<path d="M182,420 C180,388 179,355 181,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>'+
+    '<path d="M218,420 C220,388 221,355 219,322" stroke="#c8bfb0" stroke-width="0.9" fill="none" stroke-dasharray="5,7"/>'+
+    '<path d="M200,415 C200,415 158,378 152,348 C147,324 158,304 172,304 C181,304 190,312 196,322 C198,326 200,332 200,332 C200,332 202,326 204,322 C210,312 219,304 228,304 C242,304 253,324 248,348 C242,378 200,415 200,415Z" fill="white" stroke="#666" stroke-width="1.8"/>'+
+    goalSvg+
+    '<path d="M170,340 C150,325 126,308 100,292 C78,278 56,268 34,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M100,292 C78,270 58,244 40,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M40,216 C28,196 18,174 10,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M165,308 C142,286 116,262 86,240 C66,226 44,216 22,208" stroke="#666" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M172,278 C152,256 128,232 100,210 C80,194 58,182 36,172" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M100,210 C84,192 66,172 50,152" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M230,340 C250,325 274,308 300,292 C322,278 344,268 366,260" stroke="#666" stroke-width="5.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M300,292 C322,270 342,244 360,216" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M360,216 C372,196 382,174 390,150" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M235,308 C258,286 284,262 314,240 C334,226 356,216 378,208" stroke="#666" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M228,278 C248,256 272,232 300,210 C320,194 342,182 364,172" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M300,210 C316,192 334,172 350,152" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M200,260 C196,232 190,204 182,176 C176,154 168,134 158,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M200,260 C204,232 210,204 218,176 C224,154 232,134 242,114" stroke="#666" stroke-width="3.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M182,176 C174,154 164,132 156,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M218,176 C226,154 236,132 244,110" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M20,432 Q200,424 380,432" stroke="#999" stroke-width="1.5" fill="none"/>'+
+    '<path d="M172,430 C158,446 140,458 118,468 C100,476 80,480 60,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>'+
+    '<path d="M118,468 C100,478 82,488 64,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M180,432 C170,450 160,466 152,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M192,435 C188,455 184,474 182,490" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M200,436 C200,456 199,476 198,492" stroke="#777" stroke-width="2.5" fill="none" stroke-linecap="round"/>'+
+    '<path d="M208,435 C212,455 216,474 218,490" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    '<path d="M220,432 C230,450 240,466 248,482" stroke="#777" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M228,430 C242,446 260,458 282,468 C300,476 320,480 340,484" stroke="#777" stroke-width="4" fill="none" stroke-linecap="round"/>'+
+    '<path d="M282,468 C300,478 318,488 336,496" stroke="#777" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+    leafSvg+
+  '</svg>'+
+
+  '<div class="card" style="margin-bottom:10px;border-left:4px solid var(--gold)">'+
+    '<div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px">TRUNK &mdash; YOUR GOAL / INTENTION</div>'+
+    '<textarea style="font-size:13px;min-height:70px;line-height:1.6;font-style:italic" placeholder="Write your full goal or intention here..." data-action="tm2-goal-input">'+((TM.goal||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"))+'</textarea>'+
+  '</div>'+
+
+  '<div class="card" style="margin-bottom:10px;border-left:4px solid #10B981">'+
+    '<div style="font-size:10px;color:#10B981;font-weight:700;letter-spacing:1px;margin-bottom:8px">LEAVES &mdash; 15 THINGS YOU WANT</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">'+leavesGrid+'</div>'+
+  '</div>'+
+
+  '<div class="card" style="margin-bottom:12px;border-left:4px solid #8B5CF6">'+
+    '<div style="font-size:10px;color:#8B5CF6;font-weight:700;letter-spacing:1px;margin-bottom:8px">ROOTS &mdash; 15 FEELINGS WHEN YOUR GOAL IS REAL</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+rootsGrid+'</div>'+
+  '</div>'+
+
+  '<div style="display:flex;gap:8px">'+
+    '<button class="btn btn-outline" style="flex:1;font-size:12px" data-action="tm2-reset-leaves">Reset Completions</button>'+
+    '<button style="flex:1;padding:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:'+C.red+';font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif" data-action="tm2-reset-all">Full Reset</button>'+
+  '</div>';
 }
-
 
 // ══════════════════════════════════════════════════════════════
 const RENDERS = {
@@ -5386,7 +5365,34 @@ function handleInput(e){
       render(); break;
     case "tm2-goal-input":
       if(!S.treeMagnet2) break;
-      S.treeMagnet2.goal = el.value; save(); break;
+      S.treeMagnet2.goal = el.value; save();
+      // Update SVG text live without full re-render
+      (function(){
+        const g = S.treeMagnet2.goal;
+        const words = g.split(" ").filter(Boolean);
+        const gl = ["","","","","",""];
+        let gi = 0;
+        words.forEach(w => {
+          if(gi < 5 && (gl[gi]+(gl[gi]?" ":"")+w).length > 20) gi++;
+          if(gi < 6) gl[gi] += (gl[gi]?" ":"") + w;
+        });
+        // Update the SVG text nodes if they exist
+        const svg = document.querySelector('#content svg');
+        if(!svg) return;
+        svg.querySelectorAll('text.goal-line').forEach(t => t.remove());
+        const ns = "http://www.w3.org/2000/svg";
+        gl.filter(Boolean).forEach((l,i) => {
+          const t = document.createElementNS(ns,'text');
+          t.setAttribute('x','200'); t.setAttribute('y', 316+i*14);
+          t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','8.5');
+          t.setAttribute('fill','#333'); t.setAttribute('font-family','Georgia,serif');
+          t.setAttribute('font-style','italic'); t.setAttribute('class','goal-line');
+          t.textContent = l; svg.appendChild(t);
+        });
+        const ph = svg.querySelector('text.goal-placeholder');
+        if(ph) ph.style.display = g ? 'none' : '';
+      })();
+      break;
     case "tm2-leaf-input":
       if(!S.treeMagnet2) break;
       S.treeMagnet2.leaves[parseInt(el.dataset.i)] = el.value; save(); break;
