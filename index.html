@@ -875,6 +875,7 @@ function showToast(){
 // HELPERS
 // ══════════════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
+const g = id => document.getElementById(id);
 const C = {
   gold:"#C9A84C",goldDk:"#A07830",goldSoft:"#F5E6C8",navy:"#0D1B2A",
   navyMid:"#1A2E45",navyLt:"#1E3A5F",green:"#10B981",red:"#EF4444",
@@ -3089,21 +3090,23 @@ function renderBucketList(){
   </div>
   <div class="card">
     <div class="card-title">💯 100 Things to Do in 2026 <span style="font-size:10px;color:var(--gold-dk);font-weight:400">(${h100done}/${h100items.length} done)</span></div>
-    <div style="font-size:10px;color:var(--gold-dk);margin-bottom:12px;font-style:italic">Type your items. Tap the checkbox to mark done.</div>
+    <div style="font-size:10px;color:var(--gold-dk);margin-bottom:12px;font-style:italic">Type your items below. Tap the checkbox to mark done.</div>
+    ${S.hundredThings.length < 100 ? `<button class="btn btn-outline btn-block" style="margin-bottom:10px;font-size:11px" data-action="add-hundred">+ Add 100 Slots</button>` : ""}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
       ${S.hundredThings.map((h,i)=>`
         <div style="display:flex;align-items:center;gap:5px;padding:6px 8px;border-radius:8px;
           background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)">
           <span style="font-size:9px;color:var(--gold-dk);min-width:16px;font-weight:700">${i+1}</span>
-          <input value="${h.item||""}" placeholder="Item ${i+1}..."
+          <input value="${(h.item||"").replace(/"/g,'&quot;')}" placeholder="Item ${i+1}..."
             style="font-size:10px;padding:2px 4px;flex:1;background:transparent;border:none;
             border-bottom:1px solid rgba(201,168,76,.12);border-radius:0;
-            color:${h.done?"var(--gray-lt)":"var(--gold-soft)"};outline:none;"
+            color:${h.done?"var(--gray-lt)":"var(--gold-soft)"};outline:none;${h.done?"text-decoration:line-through":""}"
             data-action="hundred-item" data-idx="${i}"/>
           ${h.item?`<div data-action="toggle-hundred" data-idx="${i}"
             style="width:15px;height:15px;border-radius:3px;border:1.5px solid ${h.done?C.gold:"rgba(201,168,76,.3)"};
             background:${h.done?C.gold:"transparent"};cursor:pointer;flex-shrink:0;
-            display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--navy);font-weight:700">${h.done?"✓":""}</div>`:""}
+            display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--navy);font-weight:700">${h.done?"✓":""}</div>`
+          :`<div style="width:15px;height:15px;flex-shrink:0"></div>`}
         </div>`).join("")}
     </div>
   </div>`;
@@ -5549,6 +5552,11 @@ function handleClick(e){
     // ── NEW MODULE HANDLERS ──
     case "toggle-bucket":
       S.bucketList[idx].done = !S.bucketList[idx].done;
+      save(); render(); break;
+
+    case "add-hundred":
+      if(!S.hundredThings) S.hundredThings = [];
+      while(S.hundredThings.length < 100) S.hundredThings.push({item:"", done:false});
       save(); render(); break;
 
     case "toggle-hundred":
