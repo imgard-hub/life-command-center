@@ -3562,7 +3562,6 @@ function renderTimeBudget(){
   const weekCol      = weekPct>=80?C.green:weekPct>=50?C.orange:C.red;
 
   // Recent log entries
-  const recentLog = TB.log.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
 
   return `
   ${sectionHdr("⏱️","Time Budget","What gets scheduled gets done. What gets measured gets improved.")}
@@ -3609,26 +3608,49 @@ function renderTimeBudget(){
   <!-- Deep work log -->
   <button class="btn btn-outline btn-block" style="margin-bottom:14px" data-action="tb-log-deep">⚡ Log Deep Work Session</button>
 
-  <!-- Recent log -->
-  ${recentLog.length>0?`<div class="card" style="margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="card-title" style="margin:0">📋 This Week's Log</div>
-      <span style="font-size:11px;color:var(--gray-lt)">${totalActual.toFixed(1)}h logged</span>
-    </div>
-    ${recentLog.filter(e=>{const d=new Date(e.date);return d>=mon&&d<=sun;}).length===0
-      ?`<div style="font-size:11px;color:var(--gray-lt);text-align:center;padding:12px">No hours logged this week yet</div>`
-      :recentLog.filter(e=>{const d=new Date(e.date);return d>=mon&&d<=sun;}).map((e,i)=>{
-        const area = TB.areas.find(a=>a.name===e.area)||{color:C.gold,icon:"⏱️"};
-        return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-          <span style="font-size:11px;color:${area.color};background:${area.color}15;
-            padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0">${area.icon} ${e.area}</span>
-          <span style="font-size:12px;color:var(--gold-soft);flex:1">${e.task||"—"}</span>
-          <span style="font-size:11px;font-weight:700;color:var(--gold)">${Number(e.hours).toFixed(1)}h</span>
-          <span style="font-size:10px;color:var(--gray-lt)">${new Date(e.date).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</span>
-          <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:10px"
-            data-action="tb-delete-log" data-idx="${TB.log.indexOf(e)}">✕</button>
-        </div>`;}).join("")}
-  </div>`:""}
+  <!-- Unified this-week log: regular hours + deep work combined -->
+  ${(()=>{
+    // Merge both logs, tag each with type
+    const regularThisWeek = TB.log
+      .filter(e=>{ const d=new Date(e.date); return d>=mon&&d<=sun; })
+      .map((e,origIdx)=>({...e, _type:"hours", _origIdx: TB.log.indexOf(e)}));
+    const deepThisWeek2 = TB.deepWork
+      .filter(e=>{ const d=new Date(e.date); return d>=mon&&d<=sun; })
+      .map((e,origIdx)=>({...e, _type:"deep", _origIdx: TB.deepWork.indexOf(e)}));
+    const allEntries = [...regularThisWeek, ...deepThisWeek2]
+      .sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+    if(!allEntries.length) return `<div class="card" style="margin-bottom:12px">
+      <div class="card-title">📋 This Week's Log</div>
+      <div style="font-size:11px;color:var(--gray-lt);text-align:center;padding:16px;font-style:italic">
+        No hours logged this week yet.<br>Tap + Log Hours or ⚡ Log Deep Work to get started.
+      </div>
+    </div>`;
+
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="card-title" style="margin:0">📋 This Week's Log</div>
+        <span style="font-size:11px;color:var(--gray-lt)">${totalActual.toFixed(1)}h logged · ${deepThisWeek.toFixed(1)}h deep</span>
+      </div>
+      ${allEntries.map(e=>{
+        const isDeep = e._type==="deep";
+        const area = isDeep ? {color:C.purple,icon:"⚡"} : (TB.areas.find(a=>a.name===e.area)||{color:C.gold,icon:"⏱️"});
+        const label = isDeep ? "Deep Work" : e.area;
+        const dateStr = new Date(e.date).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:10px;color:${area.color};background:${area.color}15;
+            padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0">${area.icon} ${label}</span>
+          <span style="font-size:12px;color:var(--gold-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.task||"—"}</span>
+          <span style="font-size:11px;font-weight:700;color:${isDeep?C.purple:"var(--gold)"}">${Number(e.hours).toFixed(1)}h</span>
+          <span style="font-size:10px;color:var(--gray-lt);white-space:nowrap">${dateStr}</span>
+          <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:11px;
+            flex-shrink:0;padding:2px 4px;border-radius:4px"
+            onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
+            data-action="${isDeep?'tb-delete-deep':'tb-delete-log'}" data-idx="${e._origIdx}">✕</button>
+        </div>`;
+      }).join("")}
+    </div>`;
+  })()}
 
   <!-- Past weeks summary -->
   ${(()=>{
@@ -4617,6 +4639,11 @@ function handleClick(e){
     case "tb-delete-log":
       if(confirm("Remove this log entry?")){
         S.timeBudget.log.splice(idx,1); save(); render();
+      } break;
+
+    case "tb-delete-deep":
+      if(confirm("Remove this deep work entry?")){
+        S.timeBudget.deepWork.splice(idx,1); save(); render();
       } break;
 
     case "tb-edit-targets":
