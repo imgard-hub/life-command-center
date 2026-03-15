@@ -3115,36 +3115,187 @@ function renderBucketList(){
 function renderReading(){
   const statusColors={"Reading":C.gold,"Read":C.green,"Want to Read":C.blue,"Paused":C.orange};
   const byS=(s)=>S.readingList.filter(b=>b.status===s);
+
+  // Reading targets
+  if(!S.readingTargets) S.readingTargets = {yearly:24, monthly:2};
+  const RT = S.readingTargets;
+  const monthlyTarget = RT.monthly || Math.ceil(RT.yearly/12);
+
+  // Completed books with timestamps
+  const readBooks = S.readingList.filter(b=>b.status==="Read");
+  const yearlyDone = readBooks.filter(b=>{
+    if(!b.completedDate) return false;
+    return new Date(b.completedDate).getFullYear() === new Date().getFullYear();
+  }).length;
+
+  // This month's completed
+  const now = new Date();
+  const thisMonthName = now.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  const thisMonthDone = readBooks.filter(b=>{
+    if(!b.completedDate) return false;
+    const d = new Date(b.completedDate);
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).length;
+
+  // Last month carry-forward check
+  const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonthDone = readBooks.filter(b=>{
+    if(!b.completedDate) return false;
+    const d = new Date(b.completedDate);
+    return d.getMonth()===lastMonth.getMonth() && d.getFullYear()===lastMonth.getFullYear();
+  }).length;
+  const lastMonthCarried = Math.max(0, monthlyTarget - lastMonthDone);
+
+  // Pace calculation
+  const monthsElapsed = now.getMonth() + 1;
+  const expectedByNow = monthsElapsed * monthlyTarget;
+  const pace = yearlyDone >= expectedByNow ? "ahead" : yearlyDone >= expectedByNow - monthlyTarget ? "on track" : "behind";
+  const paceCol = pace==="ahead"?C.green:pace==="on track"?C.gold:C.red;
+  const paceIcon = pace==="ahead"?"🟢":pace==="on track"?"🟡":"🔴";
+
+  // Books by month for history
+  const byMonth = {};
+  readBooks.forEach(b=>{
+    if(!b.completedDate) return;
+    const d = new Date(b.completedDate);
+    const key = d.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+    if(!byMonth[key]) byMonth[key]=[];
+    byMonth[key].push(b);
+  });
+
   return `
-  ${sectionHdr("📚","Reading List","Feed your mind every day.")}
+  ${sectionHdr("📚","Reading List","Feed your mind every day. A book a month changes everything.")}
+
+  <!-- Yearly progress -->
+  <div class="card" style="margin-bottom:12px;border-left:4px solid ${C.blue}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div>
+        <div class="card-title" style="margin:0">📖 ${new Date().getFullYear()} Reading Goal</div>
+        <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">${paceIcon} ${pace.charAt(0).toUpperCase()+pace.slice(1)} · ${yearlyDone} of ${RT.yearly} books</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:22px;font-weight:700;color:${C.blue}">${yearlyDone}<span style="font-size:13px;color:var(--gray-lt)">/${RT.yearly}</span></div>
+        <button class="btn btn-outline" style="font-size:10px;padding:3px 10px;margin-top:4px" data-action="edit-reading-targets">✏️ Edit Goals</button>
+      </div>
+    </div>
+    ${bar(pct(yearlyDone,RT.yearly),C.blue,10)}
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:10px;color:var(--gray-lt)">Expected by now: ${expectedByNow} books</span>
+      <span style="font-size:10px;font-weight:700;color:${paceCol}">${yearlyDone>=expectedByNow?"+"+( yearlyDone-expectedByNow)+" ahead":expectedByNow-yearlyDone+" behind"}</span>
+    </div>
+  </div>
+
+  <!-- Monthly progress -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div class="card" style="border-left:4px solid ${C.green}">
+      <div style="font-size:10px;color:var(--gold-dk);font-weight:700;letter-spacing:.5px;margin-bottom:6px">THIS MONTH</div>
+      <div style="font-size:22px;font-weight:700;color:${thisMonthDone>=monthlyTarget?C.green:C.gold}">${thisMonthDone}<span style="font-size:13px;color:var(--gray-lt)">/${monthlyTarget}</span></div>
+      <div style="font-size:10px;color:var(--gray-lt);margin:4px 0 6px">${thisMonthName}</div>
+      ${bar(pct(thisMonthDone,monthlyTarget),thisMonthDone>=monthlyTarget?C.green:C.gold,7)}
+      ${thisMonthDone>=monthlyTarget?`<div style="font-size:10px;color:${C.green};font-weight:700;margin-top:5px">✅ Monthly goal hit!</div>`:""}
+    </div>
+    <div class="card" style="border-left:4px solid ${lastMonthCarried>0?C.orange:C.green}">
+      <div style="font-size:10px;color:var(--gold-dk);font-weight:700;letter-spacing:.5px;margin-bottom:6px">LAST MONTH</div>
+      <div style="font-size:22px;font-weight:700;color:${lastMonthCarried>0?C.orange:C.green}">${lastMonthDone}<span style="font-size:13px;color:var(--gray-lt)">/${monthlyTarget}</span></div>
+      <div style="font-size:10px;color:var(--gray-lt);margin:4px 0 6px">${lastMonth.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</div>
+      ${lastMonthCarried>0
+        ?`<div style="font-size:10px;color:${C.orange};font-weight:700;margin-top:2px">⚠️ ${lastMonthCarried} book${lastMonthCarried>1?"s":""} carried to this month</div>`
+        :`<div style="font-size:10px;color:${C.green};font-weight:700;margin-top:2px">✅ Goal met</div>`}
+    </div>
+  </div>
+
+  <!-- Quick stats -->
   <div class="stat-grid g3" style="margin-bottom:14px">
     ${statCard("Reading",byS("Reading").length,"active",C.gold)}
-    ${statCard("Read",byS("Read").length,"completed",C.green)}
+    ${statCard("Read",readBooks.length,"total",C.green)}
     ${statCard("To Read",byS("Want to Read").length,"queued",C.blue)}
   </div>
-  ${["Reading","Want to Read","Read","Paused"].map(status=>{
-    const books=byS(status); if(!books.length) return "";
-    return`<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <div style="width:10px;height:10px;border-radius:50%;background:${statusColors[status]}"></div>
-        <div class="card-title" style="margin:0;font-size:12px">${status}</div>
-        <span style="font-size:10px;color:var(--gray-lt)">${books.length}</span>
-      </div>
-      ${books.map(b=>{const gi=S.readingList.indexOf(b);return`
-        <div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div style="flex:1">
-              <div style="font-size:13px;color:var(--gold-soft);font-weight:700;font-family:'Cormorant Garamond',serif">${b.title}</div>
-              <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">by ${b.author} · ${b.category}</div>
-              ${b.rating?`<div style="font-size:11px;margin-top:3px">${"⭐".repeat(Number(b.rating)||0)}</div>`:""}
-              ${b.notes?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:2px">${b.notes}</div>`:""}
-            </div>
-            <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
-              data-action="edit-book" data-idx="${gi}">✏️</button>
+
+  <!-- Active reading -->
+  ${byS("Reading").length?`<div class="card" style="margin-bottom:12px;border-left:4px solid ${C.gold}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${C.gold}"></div>
+      <div class="card-title" style="margin:0;font-size:12px">Currently Reading</div>
+    </div>
+    ${byS("Reading").map(b=>{const gi=S.readingList.indexOf(b);return`
+      <div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div style="font-size:13px;color:var(--gold-soft);font-weight:700;font-family:'Cormorant Garamond',serif">${b.title}</div>
+            <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">by ${b.author} · ${b.category}</div>
+            ${b.notes?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:2px">${b.notes}</div>`:""}
           </div>
-        </div>`; }).join("")}
-    </div>`;}).join("")}
-  <button class="btn btn-outline btn-block" data-action="add-book">+ Add a Book</button>`;
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+            data-action="edit-book" data-idx="${gi}">✏️</button>
+        </div>
+        <button class="btn btn-outline" style="margin-top:8px;font-size:11px;border-color:${C.green};color:${C.green}"
+          data-action="mark-book-read" data-idx="${gi}">✅ Mark as Read</button>
+      </div>`;}).join("")}
+  </div>`:""}
+
+  <!-- Monthly history -->
+  ${Object.keys(byMonth).length?`<div class="card" style="margin-bottom:12px">
+    <div class="card-title">📅 Completed by Month</div>
+    ${Object.entries(byMonth).sort((a,b)=>new Date(b[0])-new Date(a[0])).map(([month,books])=>`
+      <div style="margin-bottom:10px;border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+          background:rgba(255,255,255,.02);cursor:pointer"
+          onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          <div>
+            <span style="font-size:12px;font-weight:700;color:var(--gold-soft)">${month}</span>
+            <span style="font-size:10px;color:var(--gray-lt);margin-left:8px">${books.length} book${books.length!==1?"s":""}</span>
+            ${books.length>=monthlyTarget?`<span style="font-size:9px;color:${C.green};margin-left:6px;font-weight:700">✅ Goal met</span>`
+              :`<span style="font-size:9px;color:${C.orange};margin-left:6px">⚠️ ${monthlyTarget-books.length} short</span>`}
+          </div>
+          <span style="font-size:12px;font-weight:700;color:${books.length>=monthlyTarget?C.green:C.orange}">${books.length}/${monthlyTarget}</span>
+        </div>
+        <div style="display:none;padding:8px 12px">
+          ${books.map(b=>`
+            <div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px">
+              <span style="color:${C.green}">✅</span>
+              <span style="color:var(--gold-soft);margin-left:6px;font-weight:700">${b.title}</span>
+              <span style="color:var(--gray-lt);margin-left:4px">by ${b.author}</span>
+              ${b.rating?`<span style="margin-left:6px">${"⭐".repeat(Number(b.rating))}</span>`:""}
+            </div>`).join("")}
+        </div>
+      </div>`).join("")}
+  </div>`:""}
+
+  <!-- Want to read -->
+  ${byS("Want to Read").length?`<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${C.blue}"></div>
+      <div class="card-title" style="margin:0;font-size:12px">Want to Read</div>
+    </div>
+    ${byS("Want to Read").map(b=>{const gi=S.readingList.indexOf(b);return`
+      <div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:12px;color:var(--gold-soft);font-weight:700">${b.title}</div>
+          <div style="font-size:10px;color:var(--gray-lt)">by ${b.author}</div>
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-book" data-idx="${gi}">✏️</button>
+      </div>`; }).join("")}
+  </div>`:""}
+
+  <!-- Paused -->
+  ${byS("Paused").length?`<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${C.orange}"></div>
+      <div class="card-title" style="margin:0;font-size:12px">Paused</div>
+    </div>
+    ${byS("Paused").map(b=>{const gi=S.readingList.indexOf(b);return`
+      <div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between">
+        <div>
+          <div style="font-size:12px;color:var(--gold-soft)">${b.title}</div>
+          <div style="font-size:10px;color:var(--gray-lt)">by ${b.author}</div>
+        </div>
+        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer"
+          data-action="edit-book" data-idx="${gi}">✏️</button>
+      </div>`; }).join("")}
+  </div>`:""}
+
+  <button class="btn btn-gold btn-block" style="margin-bottom:8px" data-action="add-book">+ Add a Book</button>`;
 }
 
 function renderRituals(){
@@ -5649,6 +5800,31 @@ function handleClick(e){
         {key:"year",label:"Year",val:S.bucketList[idx].year},
       ], vals => { Object.assign(S.bucketList[idx],vals); }); break;
 
+    case "edit-reading-targets":
+      openCustomModal("📖 Reading Goals",`
+        <label class="lbl">Yearly Target (books)</label>
+        <input id="m-rtyear" class="inp" type="number" min="1" max="200" value="${(S.readingTargets&&S.readingTargets.yearly)||24}">
+        <label class="lbl">Monthly Target (books)</label>
+        <input id="m-rtmonth" class="inp" type="number" min="1" max="20" value="${(S.readingTargets&&S.readingTargets.monthly)||2}">
+        <div style="font-size:10px;color:var(--gray-lt);margin-top:4px;font-style:italic">Tip: yearly ÷ 12 = monthly pace</div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const yr=parseInt(g('m-rtyear').value)||24;
+            const mo=parseInt(g('m-rtmonth').value)||2;
+            if(!S.readingTargets)S.readingTargets={};
+            S.readingTargets.yearly=yr; S.readingTargets.monthly=mo;
+            save();closeCustomModal();render();">Save Goals</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+
+    case "mark-book-read":
+      S.readingList[idx].status = "Read";
+      S.readingList[idx].completedDate = new Date().toISOString();
+      if(!S.readingList[idx].rating) S.readingList[idx].rating = 0;
+      save(); render();
+      showSyncToast("📚 Book marked as read! Great job.");
+      break;
+
     case "add-book":
       openModal("Add a Book",[
         {key:"title",label:"Book Title",val:"",placeholder:"Title"},
@@ -5667,7 +5843,14 @@ function handleClick(e){
           options:[{val:"Want to Read",label:"Want to Read"},{val:"Reading",label:"Reading"},{val:"Read",label:"Read"},{val:"Paused",label:"Paused"}]},
         {key:"rating",label:"Rating (1-5)",val:S.readingList[idx].rating,type:"number"},
         {key:"notes",label:"Notes",val:S.readingList[idx].notes,placeholder:"Your takeaways..."},
-      ], vals => { Object.assign(S.readingList[idx],vals); }); break;
+      ], vals => {
+        const wasRead = S.readingList[idx].status === "Read";
+        Object.assign(S.readingList[idx],vals);
+        // Stamp completion date if newly marked as Read
+        if(vals.status === "Read" && !wasRead && !S.readingList[idx].completedDate){
+          S.readingList[idx].completedDate = new Date().toISOString();
+        }
+      }); break;
 
     case "add-ritual":
       openModal("Add Ritual",[
