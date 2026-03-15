@@ -741,16 +741,13 @@ function checkDailyReset(){
       S.priorityHistory.unshift(snap);
       if(S.priorityHistory.length > 35) S.priorityHistory = S.priorityHistory.slice(0,35);
 
-      // Carry forward incomplete tasks with red missed flag
-      S.priorities.forEach(p => {
-        if(!p.done){
-          p.carriedFrom = S.lastReset;
-          p.missed = true;
-        } else {
-          p.done = false;
-          delete p.carriedFrom;
-          delete p.missed;
-        }
+      // Remove completed tasks — they're done, clear them out
+      // Carry forward ONLY incomplete tasks with red missed flag
+      S.priorities = S.priorities.filter(p => {
+        if(p.done) return false; // completed → remove from list
+        p.carriedFrom = S.lastReset;
+        p.missed = true;
+        return true; // missed → keep with red flag
       });
     } else {
       S.priorities.forEach(p => { p.done = false; delete p.carriedFrom; delete p.missed; });
