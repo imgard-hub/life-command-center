@@ -769,7 +769,11 @@ function checkDailyReset(){
     S.schedule.forEach(s => s.done = false);
     S.wellness.forEach(w => w.done = false);
     S.marketing.forEach(m => m.done = false);
-    S.meditation.forEach(m => m.done = false);
+    // Meditation resets weekly on Monday only
+    const resetDay = new Date(today).getDay(); // 0=Sun, 1=Mon
+    if(resetDay === 1) {
+      S.meditation.forEach(m => { m.done = false; });
+    }
     // Inject any rescheduled tasks for today
     if(S.rescheduled && S.rescheduled.length > 0){
       const toAdd = S.rescheduled.filter(r=>r.scheduledFor==="tomorrow");
@@ -1275,8 +1279,13 @@ function renderPriorities(){
               data-action="dismiss-carried" data-idx="${i}">✕ Dismiss</button>
           </div>`:""}
         </div>
-        <button style="background:none;border:none;color:var(--gold-dk);font-size:16px;cursor:pointer;padding:4px"
-          data-action="edit-priority" data-idx="${i}">✏️</button>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:16px;cursor:pointer;padding:4px"
+            data-action="edit-priority" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:rgba(255,255,255,.15);font-size:14px;cursor:pointer;padding:4px"
+            onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
+            data-action="delete-priority" data-idx="${i}">🗑️</button>
+        </div>
       </div>
     </div>`;}).join("")}
 
@@ -1398,8 +1407,13 @@ function renderWellness(){
             font-weight:${w.done?600:400};text-decoration:${w.done?"line-through":"none"}">${w.label}</span>
           ${chkBox(w.done,C.green,18)}
         </div>
-        <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px;flex-shrink:0"
-          data-action="edit-wellness" data-idx="${i}">✏️</button>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:12px;cursor:pointer;padding:2px"
+            data-action="edit-wellness" data-idx="${i}">✏️</button>
+          <button style="background:none;border:none;color:rgba(255,255,255,.15);font-size:12px;cursor:pointer;padding:2px"
+            onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
+            data-action="delete-wellness" data-idx="${i}">🗑️</button>
+        </div>
       </div>`).join("")}
   </div>
   <button class="btn btn-outline btn-block" data-action="add-wellness">+ Add Wellness Habit</button>`;
@@ -3038,8 +3052,13 @@ function renderGoals(){
           <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">${tag(g.area,C.gold)} · 📅 ${g.deadline||"No deadline"}</div>
           ${g.why?`<div style="font-size:11px;color:var(--gold-dk);margin-top:4px;font-style:italic">"${g.why}"</div>`:""}
         </div>
-        <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:4px"
-          data-action="edit-goal" data-idx="${gi}">✏️</button>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:4px"
+            data-action="edit-goal" data-idx="${gi}">✏️</button>
+          <button style="background:none;border:none;color:rgba(255,255,255,.15);font-size:13px;cursor:pointer;padding:4px"
+            onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
+            data-action="delete-goal" data-idx="${gi}">🗑️</button>
+        </div>
       </div>
       <div style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
@@ -3050,10 +3069,15 @@ function renderGoals(){
       </div>
       <div style="font-size:10px;color:var(--gold-dk);letter-spacing:1px;font-weight:700;margin-bottom:6px">MICROTASKS</div>
       ${g.microtasks.map((mt,mi)=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer"
-          data-action="toggle-microtask" data-goal="${gi}" data-task="${mi}">
-          ${chkBox(mt.done,C.gold,20)}
-          <span style="font-size:12px;color:${mt.done?"var(--gray-lt)":"var(--gold-soft)"};text-decoration:${mt.done?"line-through":"none"};flex:1">${mt.task}</span>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer"
+            data-action="toggle-microtask" data-goal="${gi}" data-task="${mi}">
+            ${chkBox(mt.done,C.gold,20)}
+            <span style="font-size:12px;color:${mt.done?"var(--gray-lt)":"var(--gold-soft)"};text-decoration:${mt.done?"line-through":"none"};flex:1">${mt.task}</span>
+          </div>
+          <button style="background:none;border:none;color:rgba(255,255,255,.1);cursor:pointer;font-size:11px;flex-shrink:0"
+            onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='rgba(255,255,255,.1)'"
+            data-action="delete-microtask" data-goal="${gi}" data-task="${mi}">✕</button>
         </div>`).join("")}
       <button style="background:none;border:none;color:var(--gold-dk);font-size:11px;cursor:pointer;margin-top:10px;font-family:Montserrat,sans-serif;font-weight:600;letter-spacing:1px"
         data-action="add-microtask" data-idx="${gi}">+ Add microtask</button>
@@ -4647,6 +4671,11 @@ function handleClick(e){
       if(S.priorities[idx].done){ delete S.priorities[idx].missed; delete S.priorities[idx].carriedFrom; }
       save(); render(); break;
 
+    case "delete-priority":
+      if(confirm("Remove this priority?")){
+        S.priorities.splice(idx,1); save(); render();
+      } break;
+
     case "complete-carried":
       S.priorities[idx].done = true;
       delete S.priorities[idx].missed;
@@ -5533,6 +5562,19 @@ function handleClick(e){
           <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
         </div>
       `); break;}
+
+    case "delete-goal":
+      if(confirm("Delete this goal and all its microtasks?")){
+        S.goals.splice(idx,1); save(); render();
+      } break;
+
+    case "delete-microtask": {
+      const goalIdx = parseInt(el.dataset.goal);
+      const taskIdx = parseInt(el.dataset.task);
+      if(confirm("Remove this microtask?")){
+        S.goals[goalIdx].microtasks.splice(taskIdx,1); save(); render();
+      } break;
+    }
 
     case "tm-delete-goal":
       if(confirm("Remove this goal tree?")){ S.treeMagnet.goals.splice(idx,1); window._tmSelGoal=null; save(); render(); } break;
