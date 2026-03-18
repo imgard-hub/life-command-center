@@ -1031,7 +1031,10 @@ function renderDashboard(){
             ${carried?`<div style="font-size:9px;color:${C.red};font-weight:700;margin-bottom:2px">🔴 FROM ${new Date(p.carriedFrom).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</div>`:""}
             <div style="font-size:11px;color:${p.done?"var(--gray-lt)":carried?"var(--gold-soft)":"var(--gold-soft)"};
               text-decoration:${p.done?"line-through":"none"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.task}</div>
-            <div style="font-size:9px;color:var(--gray-lt);margin-top:1px">⏰ ${p.time}</div>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:2px;flex-wrap:wrap">
+              <div style="font-size:9px;color:var(--gray-lt)">⏰ ${p.time}</div>
+              ${p.project?`<div style="font-size:9px;color:${C.blue};background:rgba(59,130,246,.1);padding:1px 6px;border-radius:8px;font-weight:600">🏗️ ${p.project}</div>`:""}
+            </div>
             ${carried && !p.done ? `<div style="display:flex;gap:4px;margin-top:4px">
               <button style="font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid ${C.green};
                 background:transparent;color:${C.green};cursor:pointer" data-action="complete-carried" data-idx="${i}">✓ Done</button>
@@ -1267,6 +1270,7 @@ function renderPriorities(){
             ${isCarried?`<span style="font-size:9px;font-weight:700;color:${C.red};background:rgba(239,68,68,.15);padding:2px 8px;border-radius:10px;letter-spacing:.5px">🔴 CARRIED FROM ${new Date(p.carriedFrom).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>`
             :`${tag(p.level+" PRIORITY",LEVEL_COLOR[p.level])}`}
             <span style="font-size:9px;color:var(--gray-lt)">⏰ ${p.time}</span>
+            ${p.project?`<span style="font-size:9px;color:${C.blue};background:rgba(59,130,246,.12);padding:2px 8px;border-radius:10px;font-weight:600">🏗️ ${p.project}</span>`:""}
           </div>
           <div style="font-size:14px;font-family:'Cormorant Garamond',serif;color:${p.done?"var(--gold-dk)":"var(--gold-soft)"};
             text-decoration:${p.done?"line-through":"none"};line-height:1.5">${p.task}</div>
@@ -1298,6 +1302,10 @@ function renderPriorities(){
         <option value="HIGH">🔴 HIGH Priority</option>
         <option value="MEDIUM" selected>🟡 MEDIUM Priority</option>
         <option value="LOW">🟢 LOW Priority</option>
+      </select>
+      <select id="new-project" style="background:rgba(255,255,255,.06);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:9px 12px;color:var(--gold-soft);font-family:Montserrat,sans-serif;font-size:12px;outline:none">
+        <option value="">🔗 Link to project (optional)</option>
+        ${(S.projects||[]).map(p=>`<option value="${p.name}">🏗️ ${p.name}</option>`).join("")}
       </select>
       <button class="btn btn-primary" data-action="add-priority">Add Priority</button>
     </div>
@@ -2757,6 +2765,19 @@ function renderProjects(){
           </div>
           ${bar(pp, pp>=100?C.green:STATUS_COLOR[p.status], 8)}
           ${p.why?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:6px">💡 ${p.why}</div>`:""}
+          ${(()=>{
+            const linked = S.priorities.filter(pr=>pr.project===p.name&&!pr.done);
+            if(!linked.length) return "";
+            return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)">
+              <div style="font-size:9px;color:${C.blue};font-weight:700;letter-spacing:.5px;margin-bottom:5px">⭐ TODAY'S LINKED PRIORITIES</div>
+              ${linked.map(pr=>`
+                <div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+                  <span style="font-size:9px;color:${LEVEL_COLOR[pr.level]||C.gold};font-weight:700">${pr.level}</span>
+                  <span style="font-size:11px;color:var(--gold-soft)">${pr.task}</span>
+                  <span style="font-size:9px;color:var(--gray-lt);margin-left:auto">⏰ ${pr.time}</span>
+                </div>`).join("")}
+            </div>`;
+          })()}
         </div>`;
       }).join("");
     })()}`;
@@ -5702,18 +5723,38 @@ function handleClick(e){
       const task = document.getElementById("new-task")?.value?.trim();
       const time = document.getElementById("new-time")?.value?.trim();
       const level = document.getElementById("new-level")?.value;
+      const project = document.getElementById("new-project")?.value||"";
       if(!task) return;
-      S.priorities.push({id:Date.now(),task,level:level||"MEDIUM",time:time||"TBD",done:false});
+      S.priorities.push({id:Date.now(),task,level:level||"MEDIUM",time:time||"TBD",done:false,project});
       save(); render(); break;
     }
 
     case "edit-priority":
-      openModal("Edit Priority",[
-        {key:"task",label:"Task",val:S.priorities[idx].task,placeholder:"Task description"},
-        {key:"time",label:"Time Block",val:S.priorities[idx].time,placeholder:"e.g. 2–3 PM"},
-        {key:"level",label:"Priority Level",type:"select",val:S.priorities[idx].level,
-          options:[{val:"HIGH",label:"🔴 HIGH"},{val:"MEDIUM",label:"🟡 MEDIUM"},{val:"LOW",label:"🟢 LOW"}]},
-      ], vals => { Object.assign(S.priorities[idx],vals); }); break;
+      openCustomModal("✏️ Edit Priority",`
+        <label class="lbl">Task</label>
+        <input id="m-ptask" class="inp" value="${(S.priorities[idx].task||'').replace(/"/g,'&quot;')}" placeholder="Task description">
+        <label class="lbl">Time Block</label>
+        <input id="m-ptime" class="inp" value="${S.priorities[idx].time||''}" placeholder="e.g. 2–3 PM">
+        <label class="lbl">Priority Level</label>
+        <select id="m-plevel" class="inp">
+          <option value="HIGH" ${S.priorities[idx].level==="HIGH"?"selected":""}>🔴 HIGH</option>
+          <option value="MEDIUM" ${S.priorities[idx].level==="MEDIUM"?"selected":""}>🟡 MEDIUM</option>
+          <option value="LOW" ${S.priorities[idx].level==="LOW"?"selected":""}>🟢 LOW</option>
+        </select>
+        <label class="lbl">🔗 Link to Project</label>
+        <select id="m-pproject" class="inp">
+          <option value="">None</option>
+          ${(S.projects||[]).map(p=>`<option value="${p.name}" ${S.priorities[idx].project===p.name?"selected":""}>${p.name}</option>`).join("")}
+        </select>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            S.priorities[${idx}].task=g('m-ptask').value.trim();
+            S.priorities[${idx}].time=g('m-ptime').value.trim();
+            S.priorities[${idx}].level=g('m-plevel').value;
+            S.priorities[${idx}].project=g('m-pproject').value;
+            save();closeCustomModal();render();">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
 
     case "edit-debt":
       openModal("Update Debt Balance",[
