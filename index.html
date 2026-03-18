@@ -2757,9 +2757,26 @@ function renderProjects(){
               <div style="font-size:22px;font-weight:700;color:${pp>=100?C.green:STATUS_COLOR[p.status]};font-family:'Cormorant Garamond',serif">${pp}%</div>
               <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
                 <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:2px"
-                  data-action="edit-project" data-idx="${realIdx}">✏️</button>
+                  onclick="event.stopPropagation();
+                    const pi=${realIdx};
+                    openModal('Edit Project',[
+                      {key:'name',label:'Project Name',val:S.projects[pi].name},
+                      {key:'category',label:'Category',type:'select',val:S.projects[pi].category,options:['Kudrant Lab','Accelerator','Rescue+','Poetry','Personal','Home','Health','Business','Other'].map(v=>({val:v,label:v}))},
+                      {key:'why',label:'Why This Matters',val:S.projects[pi].why||''},
+                      {key:'finish',label:'Target Finish Date',val:S.projects[pi].finish||'',type:'date'},
+                      {key:'quarter',label:'Quarter',type:'select',val:S.projects[pi].quarter||'Q2',options:['Q1','Q2','Q3','Q4'].map(v=>({val:v,label:v}))},
+                      {key:'status',label:'Status',type:'select',val:S.projects[pi].status,options:['Not Started','Planning','In Progress','Waiting','Completed','On Hold'].map(v=>({val:v,label:v}))},
+                      {key:'priority',label:'Priority',type:'select',val:S.projects[pi].priority||'MEDIUM',options:['HIGH','MEDIUM','LOW'].map(v=>({val:v,label:v}))},
+                    ], vals=>{Object.assign(S.projects[pi],vals);});">✏️</button>
                 <button style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;padding:2px"
-                  data-action="delete-project" data-idx="${realIdx}">🗑️</button>
+                  onclick="event.stopPropagation();
+                    if(confirm('Delete this project and all its tasks?')){
+                      const pi=${realIdx};
+                      const pid=S.projects[pi].id;
+                      S.projects.splice(pi,1);
+                      S.projectTasks=(S.projectTasks||[]).filter(t=>t.projectId!==pid);
+                      save();render();
+                    }">🗑️</button>
               </div>
             </div>
           </div>
