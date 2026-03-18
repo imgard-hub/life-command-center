@@ -2755,18 +2755,18 @@ function renderProjects(){
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
               <div style="font-size:22px;font-weight:700;color:${pp>=100?C.green:STATUS_COLOR[p.status]};font-family:'Cormorant Garamond',serif">${pp}%</div>
-              <div style="display:flex;gap:4px">
+              <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
                 <button style="background:none;border:none;color:var(--gold-dk);font-size:13px;cursor:pointer;padding:2px"
-                  data-action="edit-project" data-idx="${realIdx}" onclick="event.stopPropagation()">✏️</button>
+                  data-action="edit-project" data-idx="${realIdx}">✏️</button>
                 <button style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;padding:2px"
-                  data-action="delete-project" data-idx="${realIdx}" onclick="event.stopPropagation()">🗑️</button>
+                  data-action="delete-project" data-idx="${realIdx}">🗑️</button>
               </div>
             </div>
           </div>
           ${bar(pp, pp>=100?C.green:STATUS_COLOR[p.status], 8)}
           ${p.why?`<div style="font-size:10px;color:var(--gold-dk);font-style:italic;margin-top:6px">💡 ${p.why}</div>`:""}
           ${(()=>{
-            const linked = S.priorities.filter(pr=>pr.project===p.name&&!pr.done);
+            const linked = (S.priorities||[]).filter(pr=>(pr.project||"")=== p.name && !pr.done && p.name);
             if(!linked.length) return "";
             return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)">
               <div style="font-size:9px;color:${C.blue};font-weight:700;letter-spacing:.5px;margin-bottom:5px">⭐ TODAY'S LINKED PRIORITIES</div>
