@@ -1217,10 +1217,104 @@ function renderWeeklyPlan(){
 
   // ── WEEK VIEW ──────────────────────────────────
   if(view === "week"){
-    return `
-    ${sectionHdr("📆","Weekly Plan","Your template week. Every block is a commitment to your future.")}
+    const selectedDay = WP.selectedDay || null;
+    const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    const DAY_SHORT = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    // Build the 7-col grid header + mini blocks
+    const gridHtml = DAYS.map((day,di)=>{
+      const dayBlocks = blocksForDay(day);
+      const p = pctForDay(day);
+      const isToday = day === today;
+      const isSelected = day === selectedDay;
+      const col = p===100?C.green:p>=50?C.gold:"rgba(255,255,255,.2)";
+      return `<div style="min-width:0;cursor:pointer;border-radius:10px;overflow:hidden;
+        border:2px solid ${isSelected?"rgba(201,168,76,.7)":isToday?"rgba(201,168,76,.3)":"rgba(255,255,255,.07)"};
+        background:${isSelected?"rgba(201,168,76,.06)":isToday?"rgba(201,168,76,.03)":"rgba(255,255,255,.02)"};
+        transition:all .15s" data-action="wp-select-day" data-day="${day}">
+        <!-- Day header -->
+        <div style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.06);
+          background:${isSelected?"rgba(201,168,76,.1)":"rgba(255,255,255,.03)"}">
+          <div style="font-size:12px;font-weight:700;color:${isToday?C.gold:isSelected?"var(--gold-soft)":"var(--gray-lt)"}">
+            ${DAY_SHORT[di]}
+          </div>
+          ${isToday?`<div style="font-size:8px;color:${C.gold};font-weight:700;letter-spacing:.5px">TODAY</div>`:""}
+          <div style="margin-top:5px;height:3px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden">
+            <div style="height:100%;width:${p}%;background:${col};border-radius:2px"></div>
+          </div>
+          <div style="font-size:9px;color:var(--gray-lt);margin-top:3px">${doneForDay(day)}/${dayBlocks.length}</div>
+        </div>
+        <!-- Mini blocks -->
+        <div style="padding:5px 5px">
+          ${dayBlocks.length===0
+            ?`<div style="font-size:9px;color:rgba(255,255,255,.2);text-align:center;padding:8px 0;font-style:italic">empty</div>`
+            :dayBlocks.map(b=>`
+              <div style="display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:5px;margin-bottom:2px;
+                background:${b.done?b.color+"20":"rgba(255,255,255,.03)"};border-left:2px solid ${b.color}">
+                <input type="checkbox" ${b.done?"checked":""} data-action="wp-toggle" data-id="${b.id}"
+                  style="width:11px;height:11px;accent-color:${b.color};flex-shrink:0;cursor:pointer"/>
+                <div style="flex:1;min-width:0;overflow:hidden">
+                  <div style="font-size:9px;font-weight:600;color:${b.done?"rgba(255,255,255,.3)":b.color};
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${b.done?"text-decoration:line-through":""}">
+                    ${b.label}
+                  </div>
+                  <div style="font-size:8px;color:rgba(255,255,255,.3)">${b.time}</div>
+                </div>
+              </div>`).join("")}
+        </div>
+      </div>`;
+    }).join("");
+
+    // Detail panel for selected day
+    const detailHtml = selectedDay ? (()=>{
+      const dayBlocks = blocksForDay(selectedDay);
+      const p = pctForDay(selectedDay);
+      const col = p===100?C.green:p>=50?C.gold:C.red;
+      return `<div class="card" style="margin-top:14px;border-left:4px solid ${C.gold}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--gold-soft)">${selectedDay}</div>
+            <div style="font-size:11px;color:var(--gray-lt)">${doneForDay(selectedDay)}/${dayBlocks.length} completed · ${p}%</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline" style="font-size:11px" data-action="wp-add-block" data-day="${selectedDay}">+ Add</button>
+            <button style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:16px;padding:4px"
+              data-action="wp-select-day" data-day="">✕</button>
+          </div>
+        </div>
+        ${dayBlocks.length===0
+          ?`<div style="font-size:12px;color:var(--gray-lt);text-align:center;padding:20px;font-style:italic">No blocks for ${selectedDay} — tap + Add</div>`
+          :dayBlocks.map(b=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;margin-bottom:5px;
+            background:${b.done?b.color+"15":"rgba(255,255,255,.03)"};border:1px solid ${b.done?b.color+"44":"rgba(255,255,255,.06)"}">
+            <input type="checkbox" ${b.done?"checked":""} data-action="wp-toggle" data-id="${b.id}"
+              style="width:15px;height:15px;accent-color:${b.color};flex-shrink:0;cursor:pointer"/>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:${b.done?"var(--gray-lt)":b.color};${b.done?"text-decoration:line-through":""}">
+                ${b.label}
+              </div>
+              <div style="font-size:10px;color:var(--gray-lt);margin-top:2px">
+                ${b.time} · <span style="color:${b.color}">${b.area}</span>
+              </div>
+              ${b.notes?`<div style="font-size:10px;color:rgba(255,255,255,.35);font-style:italic;margin-top:2px">${b.notes}</div>`:""}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button style="background:none;border:none;color:${C.blue};cursor:pointer;font-size:11px;padding:2px"
+                title="Add as priority" data-action="wp-to-priority" data-id="${b.id}">⭐</button>
+              <button style="background:none;border:none;color:var(--gold-dk);cursor:pointer;font-size:12px;padding:2px"
+                data-action="wp-edit-block" data-id="${b.id}">✏️</button>
+              <button style="background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:12px;padding:2px"
+                onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='rgba(255,255,255,.2)'"
+                data-action="wp-delete-block" data-id="${b.id}">✕</button>
+            </div>
+          </div>`).join("")}
+      </div>`;
+    })() : "";
+
+    return `
+    ${sectionHdr("📆","Weekly Plan","Tap any day to expand. Check off blocks as you complete them.")}
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div style="display:flex;gap:6px">
         <button style="padding:6px 16px;border-radius:20px;border:1px solid ${C.gold};background:rgba(201,168,76,.2);color:${C.gold};font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer" data-action="wp-view" data-v="week">Week</button>
         <button style="padding:6px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--gray-lt);font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer" data-action="wp-view" data-v="month">Month</button>
@@ -1231,67 +1325,26 @@ function renderWeeklyPlan(){
       </div>
     </div>
 
-    <!-- Weekly progress -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;border:0.5px solid rgba(201,168,76,.2);border-radius:10px;background:rgba(201,168,76,.05)">
-      <span style="font-size:12px;color:var(--gray-lt)">Week progress</span>
-      <div style="flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden">
-        <div style="height:100%;width:${weekPct}%;background:${C.gold};border-radius:4px;transition:width .5s"></div>
+    <!-- Week progress bar -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;border:0.5px solid rgba(201,168,76,.2);border-radius:10px;background:rgba(201,168,76,.04)">
+      <span style="font-size:11px;color:var(--gray-lt)">Week</span>
+      <div style="flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden">
+        <div style="height:100%;width:${weekPct}%;background:${C.gold};border-radius:3px;transition:width .5s"></div>
       </div>
-      <span style="font-size:14px;font-weight:700;color:${C.gold}">${weekPct}%</span>
-      <span style="font-size:11px;color:var(--gray-lt)">${totalDone}/${totalBlocks}</span>
+      <span style="font-size:13px;font-weight:700;color:${C.gold}">${weekPct}%</span>
+      <span style="font-size:10px;color:var(--gray-lt)">${totalDone}/${totalBlocks}</span>
     </div>
 
-    <!-- Area legend -->
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
-      ${Object.entries(AREA_COL).map(([area,col])=>`
-        <span style="font-size:10px;padding:2px 10px;border-radius:12px;background:${col}18;border:0.5px solid ${col}55;color:${col};font-weight:600">${area}</span>
-      `).join("")}
+    <!-- 7-column calendar grid -->
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:4px">
+      ${gridHtml}
     </div>
 
-    <!-- Day columns -->
-    ${DAYS.map(day=>{
-      const dayBlocks = blocksForDay(day);
-      const p = pctForDay(day);
-      const isToday = day === today;
-      const col = p===100?C.green:p>=50?C.gold:C.red;
-      return `
-      <div class="card" style="margin-bottom:10px;border-left:4px solid ${isToday?C.gold:"rgba(255,255,255,.1)"}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div>
-            <span style="font-size:14px;font-weight:700;color:${isToday?C.gold:"var(--gold-soft)"}">${day}</span>
-            ${isToday?`<span style="font-size:9px;color:${C.gold};margin-left:8px;font-weight:700;letter-spacing:.5px">TODAY</span>`:""}
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;font-weight:700;color:${col}">${p}%</span>
-            <button class="btn btn-outline" style="font-size:10px;padding:3px 10px" data-action="wp-add-block" data-day="${day}">+ Add</button>
-          </div>
-        </div>
-        ${dayBlocks.length===0?`<div style="font-size:11px;color:var(--gray-lt);font-style:italic;padding:4px 0">No blocks — tap + Add</div>`:""}
-        ${dayBlocks.map((b,bi)=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:4px;
-            background:${b.done?b.color+"18":"rgba(255,255,255,.03)"};border:1px solid ${b.done?b.color+"44":"rgba(255,255,255,.06)"}">
-            <input type="checkbox" ${b.done?"checked":""} data-action="wp-toggle" data-id="${b.id}"
-              style="width:15px;height:15px;accent-color:${b.color};flex-shrink:0;cursor:pointer"/>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600;color:${b.done?"var(--gray-lt)":b.color};${b.done?"text-decoration:line-through":""}">
-                ${b.label}
-              </div>
-              <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">${b.time} · <span style="color:${b.color}">${b.area}</span></div>
-              ${b.notes?`<div style="font-size:10px;color:var(--gray-lt);font-style:italic;margin-top:1px">${b.notes}</div>`:""}
-            </div>
-            <div style="display:flex;gap:4px;flex-shrink:0">
-              <button style="background:none;border:none;color:var(--gold-dk);cursor:pointer;font-size:12px;padding:2px"
-                data-action="wp-edit-block" data-id="${b.id}">✏️</button>
-              <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:12px;padding:2px"
-                onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
-                data-action="wp-delete-block" data-id="${b.id}">✕</button>
-              <button style="background:none;border:none;color:${C.blue};cursor:pointer;font-size:11px;padding:2px;white-space:nowrap"
-                title="Add as priority" data-action="wp-to-priority" data-id="${b.id}">⭐</button>
-            </div>
-          </div>`).join("")}
-        ${p>0?`<div style="margin-top:6px">${bar(p,col,5)}</div>`:""}
-      </div>`;
-    }).join("")}`;
+    <!-- Tap hint -->
+    ${!selectedDay?`<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.2);margin-top:6px;font-style:italic">Tap any day column to see details and edit</div>`:""}
+
+    <!-- Day detail panel -->
+    ${detailHtml}`;
   }
 
   // ── MONTH VIEW ─────────────────────────────────
@@ -4899,6 +4952,13 @@ function handleClick(e){
       if(!S.weeklyPlan) S.weeklyPlan={view:"week",blocks:[],monthLog:{}};
       S.weeklyPlan.view = el.dataset.v;
       save(); render(); break;
+
+    case "wp-select-day": {
+      if(!S.weeklyPlan) break;
+      const day = el.dataset.day||"";
+      S.weeklyPlan.selectedDay = day || null;
+      save(); render(); break;
+    }
 
     case "wp-toggle": {
       if(!S.weeklyPlan) break;
