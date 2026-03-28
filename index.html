@@ -578,6 +578,7 @@ const DEFAULTS = {
   resources:[],
   affIdx:0,
   lastReset:"",
+  weeklyPlan:{view:"week", blocks:[], monthLog:{}},
   expenses:[],
   netWorthAssets:[
     {name:"Checking Account", value:0, category:"Cash"},
@@ -1139,6 +1140,231 @@ function renderDashboard(){
   </div>`;
 }
 
+// ── WEEKLY PLAN ────────────────────────────────────────────────
+function renderWeeklyPlan(){
+  if(!S.weeklyPlan) S.weeklyPlan = {view:"week", blocks:[], monthLog:{}};
+  const WP = S.weeklyPlan;
+  if(!Array.isArray(WP.blocks)) WP.blocks = [];
+  if(!WP.monthLog) WP.monthLog = {};
+
+  // Pre-load template blocks from Lytte's schedule if empty
+  if(WP.blocks.length === 0){
+    WP.blocks = [
+      // MONDAY
+      {id:"mon-1",day:"Monday",time:"7–9 AM",label:"Poetry Biz & Marketing",area:"Poetry",color:"#8B5CF6",done:false,notes:"Content creation — captions, carousels, reels"},
+      {id:"mon-2",day:"Monday",time:"9 AM–5 PM",label:"Day Job (Oracle DBA)",area:"Job",color:"#3B82F6",done:false,notes:"W2 work — 8 hrs flexible"},
+      {id:"mon-3",day:"Monday",time:"12–2 PM",label:"Lunch Bonus — Poetry",area:"Poetry",color:"#8B5CF6",done:false,notes:"Poetry tasks if available"},
+      {id:"mon-4",day:"Monday",time:"5–8 PM",label:"Free — Rest Before Teaching",area:"Rest",color:"#10B981",done:false,notes:"Protect this gap"},
+      {id:"mon-5",day:"Monday",time:"8–10 PM",label:"Accelerator Teaching",area:"Accelerator",color:"#F59E0B",done:false,notes:"2-hr teaching slot with partner"},
+      {id:"mon-6",day:"Monday",time:"10 PM+",label:"Wind Down",area:"Rest",color:"#10B981",done:false,notes:"No work after class"},
+      // TUESDAY
+      {id:"tue-1",day:"Tuesday",time:"7–9 AM",label:"Kudrant Lab — Session A",area:"Kudrant",color:"#14B8A6",done:false,notes:"Hardest tasks first — 2 hrs deep work"},
+      {id:"tue-2",day:"Tuesday",time:"9 AM–5 PM",label:"Day Job (Oracle DBA)",area:"Job",color:"#3B82F6",done:false,notes:"W2 work — 8 hrs flexible"},
+      {id:"tue-3",day:"Tuesday",time:"12–2 PM",label:"Lunch Bonus — Kudrant",area:"Kudrant",color:"#14B8A6",done:false,notes:"Kudrant continuation if available"},
+      {id:"tue-4",day:"Tuesday",time:"5–5:30 PM",label:"Transition",area:"Rest",color:"#10B981",done:false,notes:"Step away, eat, reset"},
+      {id:"tue-5",day:"Tuesday",time:"5:30–8 PM",label:"Kudrant Lab — Session B",area:"Kudrant",color:"#14B8A6",done:false,notes:"2.5 hrs deep work continuation"},
+      {id:"tue-6",day:"Tuesday",time:"8 PM+",label:"Free Evening",area:"Rest",color:"#10B981",done:false,notes:"Fully off"},
+      // WEDNESDAY
+      {id:"wed-1",day:"Wednesday",time:"7–9 AM",label:"Etsy Store — Session A",area:"Etsy",color:"#EC4899",done:false,notes:"Product creation — 2 hrs"},
+      {id:"wed-2",day:"Wednesday",time:"9 AM–5 PM",label:"Day Job (Oracle DBA)",area:"Job",color:"#3B82F6",done:false,notes:"W2 work — 8 hrs flexible"},
+      {id:"wed-3",day:"Wednesday",time:"12–2 PM",label:"Lunch Bonus — Etsy",area:"Etsy",color:"#EC4899",done:false,notes:"Etsy listing work if available"},
+      {id:"wed-4",day:"Wednesday",time:"5–5:30 PM",label:"Transition",area:"Rest",color:"#10B981",done:false,notes:"Step away, eat, reset"},
+      {id:"wed-5",day:"Wednesday",time:"5:30–8 PM",label:"Etsy Store — Session B",area:"Etsy",color:"#EC4899",done:false,notes:"2.5 hrs — listings and setup"},
+      {id:"wed-6",day:"Wednesday",time:"8 PM+",label:"Free Evening",area:"Rest",color:"#10B981",done:false,notes:"Fully off"},
+      // THURSDAY
+      {id:"thu-1",day:"Thursday",time:"7–9 AM",label:"Kudrant Lab — Session C",area:"Kudrant",color:"#14B8A6",done:false,notes:"Continuation from Tuesday — 2 hrs"},
+      {id:"thu-2",day:"Thursday",time:"9 AM–5 PM",label:"Day Job (Oracle DBA)",area:"Job",color:"#3B82F6",done:false,notes:"W2 work — 8 hrs flexible"},
+      {id:"thu-3",day:"Thursday",time:"12–2 PM",label:"Lunch Bonus — Kudrant",area:"Kudrant",color:"#14B8A6",done:false,notes:"Kudrant if your day allows"},
+      {id:"thu-4",day:"Thursday",time:"5–9 PM",label:"Free — Rest Before Teaching",area:"Rest",color:"#10B981",done:false,notes:"No biz — protect energy"},
+      {id:"thu-5",day:"Thursday",time:"9–10:30 PM",label:"Job Support Teaching",area:"Accelerator",color:"#F59E0B",done:false,notes:"1.5 hrs teaching session"},
+      {id:"thu-6",day:"Thursday",time:"10:30 PM+",label:"Wind Down",area:"Rest",color:"#10B981",done:false,notes:"Fully off"},
+      // FRIDAY
+      {id:"fri-1",day:"Friday",time:"7–9 AM",label:"Poetry Biz — Batch & Schedule",area:"Poetry",color:"#8B5CF6",done:false,notes:"Production session — 2 hrs"},
+      {id:"fri-2",day:"Friday",time:"9 AM–5 PM",label:"Day Job (Oracle DBA)",area:"Job",color:"#3B82F6",done:false,notes:"W2 work — 8 hrs flexible"},
+      {id:"fri-3",day:"Friday",time:"12–2 PM",label:"Lunch Bonus — Poetry",area:"Poetry",color:"#8B5CF6",done:false,notes:"Finish scheduling or engagement"},
+      {id:"fri-4",day:"Friday",time:"5–5:30 PM",label:"Transition",area:"Rest",color:"#10B981",done:false,notes:"End of work week — use the energy"},
+      {id:"fri-5",day:"Friday",time:"5:30–8 PM",label:"Poetry Biz — Strategy & Growth",area:"Poetry",color:"#8B5CF6",done:false,notes:"2.5 hrs — the session that builds the biz"},
+      {id:"fri-6",day:"Friday",time:"8 PM+",label:"Free Evening",area:"Rest",color:"#10B981",done:false,notes:"Week is done — fully off"},
+      // SATURDAY
+      {id:"sat-1",day:"Saturday",time:"9–10 AM",label:"Morning Ease-In",area:"Rest",color:"#10B981",done:false,notes:"Coffee, journal, no rushing"},
+      {id:"sat-2",day:"Saturday",time:"10 AM–12 PM",label:"Poetry Biz — Deep Strategy",area:"Poetry",color:"#8B5CF6",done:false,notes:"High-level thinking — 2 hrs"},
+      {id:"sat-3",day:"Saturday",time:"12–1 PM",label:"Lunch Break",area:"Rest",color:"#10B981",done:false,notes:"Full break away from screens"},
+      {id:"sat-4",day:"Saturday",time:"1–3 PM",label:"Kudrant Lab — Review & Plan",area:"Kudrant",color:"#14B8A6",done:false,notes:"Weekly review — 2 hrs"},
+      {id:"sat-5",day:"Saturday",time:"3–5 PM",label:"Etsy Store — Continuation",area:"Etsy",color:"#EC4899",done:false,notes:"Listings and refinement — 2 hrs"},
+      {id:"sat-6",day:"Saturday",time:"5–8 PM",label:"Free Afternoon",area:"Rest",color:"#10B981",done:false,notes:"Rest and recharge"},
+      {id:"sat-7",day:"Saturday",time:"8 PM+",label:"Etsy Overflow (Optional)",area:"Etsy",color:"#EC4899",done:false,notes:"Only if energy is genuinely there"},
+      // SUNDAY
+      {id:"sun-1",day:"Sunday",time:"All Day",label:"Full Rest — No Work",area:"Rest",color:"#10B981",done:false,notes:"Everything is sustainable because Sunday exists"},
+    ];
+    save();
+  }
+
+  const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  const view = WP.view || "week";
+  const today = new Date().toLocaleDateString("en-US",{weekday:"long"});
+  const now = new Date();
+
+  // Get blocks for a given day
+  const blocksForDay = (day) => WP.blocks.filter(b=>b.day===day);
+  const doneForDay   = (day) => blocksForDay(day).filter(b=>b.done).length;
+  const pctForDay    = (day) => { const t=blocksForDay(day).length; return t?Math.round(doneForDay(day)/t*100):0; };
+  const totalBlocks  = WP.blocks.length;
+  const totalDone    = WP.blocks.filter(b=>b.done).length;
+  const weekPct      = totalBlocks ? Math.round(totalDone/totalBlocks*100) : 0;
+
+  // Area colors map
+  const AREA_COL = {Poetry:"#8B5CF6",Kudrant:"#14B8A6",Etsy:"#EC4899",Job:"#3B82F6",Accelerator:"#F59E0B",Rest:"#10B981",Free:"#6B7280"};
+
+  // ── WEEK VIEW ──────────────────────────────────
+  if(view === "week"){
+    return `
+    ${sectionHdr("📆","Weekly Plan","Your template week. Every block is a commitment to your future.")}
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px">
+        <button style="padding:6px 16px;border-radius:20px;border:1px solid ${C.gold};background:rgba(201,168,76,.2);color:${C.gold};font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer" data-action="wp-view" data-v="week">Week</button>
+        <button style="padding:6px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--gray-lt);font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer" data-action="wp-view" data-v="month">Month</button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline" style="font-size:11px" data-action="wp-add-block">+ Add Block</button>
+        <button class="btn btn-outline" style="font-size:11px" data-action="wp-reset-week">↺ Reset Week</button>
+      </div>
+    </div>
+
+    <!-- Weekly progress -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;border:0.5px solid rgba(201,168,76,.2);border-radius:10px;background:rgba(201,168,76,.05)">
+      <span style="font-size:12px;color:var(--gray-lt)">Week progress</span>
+      <div style="flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden">
+        <div style="height:100%;width:${weekPct}%;background:${C.gold};border-radius:4px;transition:width .5s"></div>
+      </div>
+      <span style="font-size:14px;font-weight:700;color:${C.gold}">${weekPct}%</span>
+      <span style="font-size:11px;color:var(--gray-lt)">${totalDone}/${totalBlocks}</span>
+    </div>
+
+    <!-- Area legend -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      ${Object.entries(AREA_COL).map(([area,col])=>`
+        <span style="font-size:10px;padding:2px 10px;border-radius:12px;background:${col}18;border:0.5px solid ${col}55;color:${col};font-weight:600">${area}</span>
+      `).join("")}
+    </div>
+
+    <!-- Day columns -->
+    ${DAYS.map(day=>{
+      const dayBlocks = blocksForDay(day);
+      const p = pctForDay(day);
+      const isToday = day === today;
+      const col = p===100?C.green:p>=50?C.gold:C.red;
+      return `
+      <div class="card" style="margin-bottom:10px;border-left:4px solid ${isToday?C.gold:"rgba(255,255,255,.1)"}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <span style="font-size:14px;font-weight:700;color:${isToday?C.gold:"var(--gold-soft)"}">${day}</span>
+            ${isToday?`<span style="font-size:9px;color:${C.gold};margin-left:8px;font-weight:700;letter-spacing:.5px">TODAY</span>`:""}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:700;color:${col}">${p}%</span>
+            <button class="btn btn-outline" style="font-size:10px;padding:3px 10px" data-action="wp-add-block" data-day="${day}">+ Add</button>
+          </div>
+        </div>
+        ${dayBlocks.length===0?`<div style="font-size:11px;color:var(--gray-lt);font-style:italic;padding:4px 0">No blocks — tap + Add</div>`:""}
+        ${dayBlocks.map((b,bi)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:4px;
+            background:${b.done?b.color+"18":"rgba(255,255,255,.03)"};border:1px solid ${b.done?b.color+"44":"rgba(255,255,255,.06)"}">
+            <input type="checkbox" ${b.done?"checked":""} data-action="wp-toggle" data-id="${b.id}"
+              style="width:15px;height:15px;accent-color:${b.color};flex-shrink:0;cursor:pointer"/>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;color:${b.done?"var(--gray-lt)":b.color};${b.done?"text-decoration:line-through":""}">
+                ${b.label}
+              </div>
+              <div style="font-size:10px;color:var(--gray-lt);margin-top:1px">${b.time} · <span style="color:${b.color}">${b.area}</span></div>
+              ${b.notes?`<div style="font-size:10px;color:var(--gray-lt);font-style:italic;margin-top:1px">${b.notes}</div>`:""}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button style="background:none;border:none;color:var(--gold-dk);cursor:pointer;font-size:12px;padding:2px"
+                data-action="wp-edit-block" data-id="${b.id}">✏️</button>
+              <button style="background:none;border:none;color:rgba(255,255,255,.15);cursor:pointer;font-size:12px;padding:2px"
+                onmouseover="this.style.color='${C.red}'" onmouseout="this.style.color='rgba(255,255,255,.15)'"
+                data-action="wp-delete-block" data-id="${b.id}">✕</button>
+              <button style="background:none;border:none;color:${C.blue};cursor:pointer;font-size:11px;padding:2px;white-space:nowrap"
+                title="Add as priority" data-action="wp-to-priority" data-id="${b.id}">⭐</button>
+            </div>
+          </div>`).join("")}
+        ${p>0?`<div style="margin-top:6px">${bar(p,col,5)}</div>`:""}
+      </div>`;
+    }).join("")}`;
+  }
+
+  // ── MONTH VIEW ─────────────────────────────────
+  if(view === "month"){
+    const month = now.getMonth();
+    const year  = now.getFullYear();
+    const monthName = now.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+    const firstDay = new Date(year,month,1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year,month+1,0).getDate();
+    // Pad to start on Sunday
+    const calCells = [];
+    for(let i=0;i<firstDay;i++) calCells.push(null);
+    for(let d=1;d<=daysInMonth;d++) calCells.push(d);
+    while(calCells.length%7!==0) calCells.push(null);
+
+    const weeks = [];
+    for(let i=0;i<calCells.length;i+=7) weeks.push(calCells.slice(i,i+7));
+    const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const FULL_DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+    return `
+    ${sectionHdr("📆","Monthly View","Your month at a glance.")}
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px">
+        <button style="padding:6px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--gray-lt);font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer" data-action="wp-view" data-v="week">Week</button>
+        <button style="padding:6px 16px;border-radius:20px;border:1px solid ${C.gold};background:rgba(201,168,76,.2);color:${C.gold};font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer" data-action="wp-view" data-v="month">Month</button>
+      </div>
+      <span style="font-size:14px;font-weight:700;color:var(--gold-soft)">${monthName}</span>
+    </div>
+
+    <div class="card" style="padding:12px">
+      <!-- DOW headers -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
+        ${DOW.map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--gray-lt);letter-spacing:.5px">${d}</div>`).join("")}
+      </div>
+      <!-- Calendar cells -->
+      ${weeks.map(week=>`
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px">
+          ${week.map((day,wi)=>{
+            if(!day) return `<div></div>`;
+            const isToday = day===now.getDate();
+            const dowName = FULL_DAYS[wi];
+            const dayBlocks = blocksForDay(dowName);
+            const areas = [...new Set(dayBlocks.map(b=>b.area))];
+            const done = dayBlocks.filter(b=>b.done).length;
+            const total = dayBlocks.length;
+            return `<div style="min-height:52px;border-radius:8px;padding:5px;
+              background:${isToday?"rgba(201,168,76,.12)":"rgba(255,255,255,.03)"};
+              border:1px solid ${isToday?"rgba(201,168,76,.4)":"rgba(255,255,255,.07)"}">
+              <div style="font-size:11px;font-weight:700;color:${isToday?C.gold:"var(--gray-lt)"};margin-bottom:4px">${day}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:2px">
+                ${areas.map(a=>`<div style="width:8px;height:8px;border-radius:2px;background:${AREA_COL[a]||C.gold}" title="${a}"></div>`).join("")}
+              </div>
+              ${total?`<div style="font-size:9px;color:var(--gray-lt);margin-top:3px">${done}/${total}</div>`:""}
+            </div>`;
+          }).join("")}
+        </div>`).join("")}
+    </div>
+
+    <!-- Area legend -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+      ${Object.entries(AREA_COL).map(([area,col])=>`
+        <span style="font-size:10px;padding:2px 10px;border-radius:12px;background:${col}18;border:0.5px solid ${col}55;color:${col};font-weight:600">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${col};margin-right:4px"></span>${area}
+        </span>
+      `).join("")}
+    </div>`;
+  }
+
+  return sectionHdr("📆","Weekly Plan","Loading...");
+}
+
 // ── MORNING ROUTINE ───────────────────────────────────────────
 function renderMorning(){
   if(!S.morning) S.morning = {
@@ -1308,6 +1534,19 @@ function renderPriorities(){
         ${(S.projects||[]).map(p=>`<option value="${p.name}">🏗️ ${p.name}</option>`).join("")}
       </select>
       <button class="btn btn-primary" data-action="add-priority">Add Priority</button>
+      ${(()=>{
+        const today = new Date().toLocaleDateString("en-US",{weekday:"long"});
+        const todayBlocks = (S.weeklyPlan&&S.weeklyPlan.blocks||[]).filter(b=>b.day===today&&!b.done);
+        if(!todayBlocks.length) return "";
+        return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">
+          <div style="font-size:10px;color:var(--gray-lt);margin-bottom:6px;font-style:italic">📆 From today's schedule — tap ⭐ to add as priority:</div>
+          ${todayBlocks.slice(0,4).map(b=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+              <span style="font-size:11px;color:${b.color}">${b.time} · ${b.label}</span>
+              <button class="btn btn-outline" style="font-size:10px;padding:2px 10px" data-action="wp-to-priority" data-id="${b.id}">⭐ Add</button>
+            </div>`).join("")}
+        </div>`;
+      })()}
     </div>
   </div>
 
@@ -4544,6 +4783,7 @@ function renderTreeMagnet(){
 const RENDERS = {
   dashboard:    renderDashboard,
   morning:      renderMorning,
+  weeklyplan:   renderWeeklyPlan,
   priorities:   renderPriorities,
   schedule:     renderSchedule,
   wellness:     renderWellness,
@@ -4654,6 +4894,121 @@ function handleClick(e){
   const idx = parseInt(el.dataset.idx);
 
   switch(action){
+    // ── WEEKLY PLAN HANDLERS ──────────────────────────────────
+    case "wp-view":
+      if(!S.weeklyPlan) S.weeklyPlan={view:"week",blocks:[],monthLog:{}};
+      S.weeklyPlan.view = el.dataset.v;
+      save(); render(); break;
+
+    case "wp-toggle": {
+      if(!S.weeklyPlan) break;
+      const bid = el.dataset.id;
+      const blk = S.weeklyPlan.blocks.find(b=>b.id===bid);
+      if(blk){ blk.done = el.checked; save(); render(); }
+      break;
+    }
+
+    case "wp-reset-week":
+      if(confirm("Reset all weekly completions? (Your blocks are kept, just unchecked)")){
+        if(S.weeklyPlan) S.weeklyPlan.blocks.forEach(b=>b.done=false);
+        save(); render();
+      } break;
+
+    case "wp-delete-block": {
+      const bid = el.dataset.id;
+      if(confirm("Remove this block?")){
+        S.weeklyPlan.blocks = S.weeklyPlan.blocks.filter(b=>b.id!==bid);
+        save(); render();
+      } break;
+    }
+
+    case "wp-to-priority": {
+      const bid = el.dataset.id;
+      const blk = S.weeklyPlan && S.weeklyPlan.blocks.find(b=>b.id===bid);
+      if(!blk) break;
+      if(!S.priorities) S.priorities=[];
+      S.priorities.push({id:Date.now(),task:blk.label,time:blk.time,level:"MEDIUM",done:false,project:""});
+      save(); render();
+      showSyncToast("⭐ Added to today's priorities!");
+      break;
+    }
+
+    case "wp-add-block": {
+      const defaultDay = el.dataset.day||"Monday";
+      const areas = ["Poetry","Kudrant","Etsy","Job","Accelerator","Rest","Free","Personal"];
+      openCustomModal("📆 Add Schedule Block",`
+        <label class="lbl">Day</label>
+        <select id="m-wpday" class="inp">
+          ${["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(d=>`<option value="${d}" ${d===defaultDay?"selected":""}>${d}</option>`).join("")}
+        </select>
+        <label class="lbl">Time</label>
+        <input id="m-wptime" class="inp" placeholder="e.g. 7–9 AM" value="">
+        <label class="lbl">Label</label>
+        <input id="m-wplabel" class="inp" placeholder="e.g. Kudrant Lab — Deep Work">
+        <label class="lbl">Area</label>
+        <select id="m-wparea" class="inp">
+          ${areas.map(a=>`<option value="${a}">${a}</option>`).join("")}
+        </select>
+        <label class="lbl">Notes (optional)</label>
+        <input id="m-wpnotes" class="inp" placeholder="What will you work on?">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const label=g('m-wplabel').value.trim();
+            if(!label){alert('Enter a label');return;}
+            const areaColors={Poetry:'#8B5CF6',Kudrant:'#14B8A6',Etsy:'#EC4899',Job:'#3B82F6',Accelerator:'#F59E0B',Rest:'#10B981',Free:'#6B7280',Personal:'#C9A84C'};
+            const area=g('m-wparea').value;
+            if(!S.weeklyPlan)S.weeklyPlan={view:'week',blocks:[],monthLog:{}};
+            S.weeklyPlan.blocks.push({
+              id:'custom-'+Date.now(),
+              day:g('m-wpday').value,
+              time:g('m-wptime').value.trim()||'TBD',
+              label,area,
+              color:areaColors[area]||'#C9A84C',
+              done:false,
+              notes:g('m-wpnotes').value.trim()
+            });
+            save();closeCustomModal();render();">Add Block</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    }
+
+    case "wp-edit-block": {
+      const bid = el.dataset.id;
+      const blk = S.weeklyPlan && S.weeklyPlan.blocks.find(b=>b.id===bid);
+      if(!blk) break;
+      const areas = ["Poetry","Kudrant","Etsy","Job","Accelerator","Rest","Free","Personal"];
+      openCustomModal("✏️ Edit Block",`
+        <label class="lbl">Day</label>
+        <select id="m-eday" class="inp">
+          ${["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(d=>`<option value="${d}" ${d===blk.day?"selected":""}>${d}</option>`).join("")}
+        </select>
+        <label class="lbl">Time</label>
+        <input id="m-etime" class="inp" value="${blk.time||""}">
+        <label class="lbl">Label</label>
+        <input id="m-elabel" class="inp" value="${(blk.label||"").replace(/"/g,'&quot;')}">
+        <label class="lbl">Area</label>
+        <select id="m-earea" class="inp">
+          ${areas.map(a=>`<option value="${a}" ${a===blk.area?"selected":""}>${a}</option>`).join("")}
+        </select>
+        <label class="lbl">Notes</label>
+        <input id="m-enotes" class="inp" value="${(blk.notes||"").replace(/"/g,'&quot;')}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" style="flex:1" onclick="
+            const areaColors={Poetry:'#8B5CF6',Kudrant:'#14B8A6',Etsy:'#EC4899',Job:'#3B82F6',Accelerator:'#F59E0B',Rest:'#10B981',Free:'#6B7280',Personal:'#C9A84C'};
+            const area=g('m-earea').value;
+            const blk=S.weeklyPlan.blocks.find(b=>b.id==='${bid}');
+            if(!blk)return;
+            blk.day=g('m-eday').value;
+            blk.time=g('m-etime').value.trim();
+            blk.label=g('m-elabel').value.trim();
+            blk.area=area;
+            blk.color=areaColors[area]||'#C9A84C';
+            blk.notes=g('m-enotes').value.trim();
+            save();closeCustomModal();render();">Save</button>
+          <button class="btn btn-outline" style="flex:1" onclick="closeCustomModal()">Cancel</button>
+        </div>`); break;
+    }
+
     // ── MORNING ROUTINE HANDLERS ─────────────────────────────
     case "toggle-morning-step": {
       if(!S.morning||!S.morning.steps) break;
@@ -6370,6 +6725,12 @@ function handleInput(e){
     case "exp-filter-month":
       window._expMonth = el.value;
       render(); break;
+    case "wp-toggle": {
+      if(!S.weeklyPlan) break;
+      const blk = S.weeklyPlan.blocks.find(b=>b.id===el.dataset.id);
+      if(blk){ blk.done = el.checked; save(); render(); }
+      break;
+    }
     case "tm3-done":
       if(!S.treeMagnet2) break;
       if(!Array.isArray(S.treeMagnet2.done)) S.treeMagnet2.done = Array(15).fill(false);
@@ -6465,6 +6826,7 @@ const TAB_GROUPS = {
   daily: [
     {id:"dashboard",   icon:"⌂",  label:"Home"},
     {id:"morning",     icon:"🌅", label:"Morning"},
+    {id:"weeklyplan",  icon:"📆", label:"Weekly Plan"},
     {id:"priorities",  icon:"⭐", label:"Priorities"},
     {id:"schedule",    icon:"🕐", label:"Schedule"},
     {id:"wellness",    icon:"🌿", label:"Wellness"},
