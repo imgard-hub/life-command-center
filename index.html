@@ -7285,6 +7285,30 @@ function unlockApp(){
     render();
     if(sbReady) pullFromCloud(true);  // forceApply=true: cloud is always source of truth on open
   }
+  // Start keep-alive ping so Supabase never pauses (free tier pauses after 7 days)
+  keepAlive();
+}
+
+// ── Keep-Alive Ping ──────────────────────────────────────────
+// Supabase free tier pauses after 7 days of inactivity.
+// This pings the database every 4 days silently to keep it awake.
+async function keepAlive(){
+  if(!sbReady) return;
+  const PING_KEY = "lcc_last_ping";
+  const FOUR_DAYS = 4 * 24 * 60 * 60 * 1000;
+  const lastPing = parseInt(localStorage.getItem(PING_KEY)||"0");
+  const now = Date.now();
+  if(now - lastPing < FOUR_DAYS) return; // pinged recently, skip
+  try {
+    // Do a lightweight read — just checks the database is awake
+    await fetch(`${SUPABASE_URL}/rest/v1/lcc_data?select=id&limit=1`, {
+      headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}
+    });
+    localStorage.setItem(PING_KEY, now.toString());
+    console.log("☁️ Keep-alive ping sent to Supabase");
+  } catch(e) {
+    console.warn("Keep-alive ping failed:", e.message);
+  }
 }
 
 // ── Lock ──────────────────────────────────────────────────────
